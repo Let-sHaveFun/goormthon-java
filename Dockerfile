@@ -1,12 +1,11 @@
-# 1단계: Build stage
-FROM maven:3.9.6-eclipse-temurin-17 AS builder
+# Dockerfile (Spring 전용)
+FROM eclipse-temurin:21-jdk as build
+
 WORKDIR /app
 COPY . .
-RUN mvn clean package -DskipTests
+RUN ./gradlew build -x test
 
-# 2단계: Runtime stage
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:21-jre
 WORKDIR /app
-COPY --from=builder /app/target/*.jar ./
-EXPOSE 8080
+COPY --from=build /app/build/libs/*.jar app.jar
 ENTRYPOINT ["java", "-jar", "app.jar"]
