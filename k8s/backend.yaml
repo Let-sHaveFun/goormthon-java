@@ -31,7 +31,7 @@ kind: Service
 metadata:
   name: java-backend
 spec:
-  type: LoadBalancer  # ✅ 추가
+#  type: LoadBalancer  # ✅ 추가
   selector:
     app: java-backend
   ports:

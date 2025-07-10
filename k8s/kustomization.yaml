@@ -1,5 +1,6 @@
 resources:
   - backend.yaml
+  - ingress.yaml
 
 configMapGenerator:
   - name: java-backend-config
