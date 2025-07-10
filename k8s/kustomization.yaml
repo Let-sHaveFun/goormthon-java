@@ -3,6 +3,6 @@ resources:
   - ingress.yaml
 
 configMapGenerator:
-  - name: java-backend-config
+  - name: java-backend-env
     files:
-      - config/config.json
+      - enviroment/env

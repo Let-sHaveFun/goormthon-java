@@ -17,14 +17,17 @@ spec:
         image: 837126493345.dkr.ecr.ap-northeast-2.amazonaws.com/team5/backend:32
         ports:
         - containerPort: 8080
-        volumeMounts:
-        - name: config-volume
-          mountPath: /app/config
-          readOnly: true
-      volumes:
-        - name: config-volume
-          configMap:
-            name: java-backend-config
+        envFrom:
+          - configMapRef:
+              name: java-backend-env
+#        volumeMounts:
+#        - name: config-volume
+#          mountPath: /app/config
+#          readOnly: true
+#      volumes:
+#        - name: config-volume
+#          configMap:
+#            name: java-backend-config
 ---
 apiVersion: v1
 kind: Service
