@@ -18,7 +18,7 @@ spec:
         ports:
         - containerPort: 8080
         env:
-          # 1. ConfigMap에서 가져오기
+          # 1. ConfigMap에서 가져오기..
           - name: DB_HOST
             valueFrom:
               configMapKeyRef:
