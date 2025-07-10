@@ -10,7 +10,7 @@ spring:
   # ?????? ??
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:jeju_audio_guide}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-    username: ${DB_USER:developer}
+    username: ${DB_USERNAME:developer}
     password: ${DB_PASSWORD:devpassword123!}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
@@ -141,3 +141,23 @@ logging:
   level:
     com.jeju.audioguide: INFO
     root: WARN
+
+---
+spring:
+  config:
+    activate:
+      on-profile: k8s
+  datasource:
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  data:
+    redis:
+      host: ${REDIS_HOST:redis-service}
+      port: ${REDIS_PORT:6379}
+  jpa:
+    show-sql: false
+logging:
+  level:
+    com.jeju.audioguide: INFO
+    root: INFO
