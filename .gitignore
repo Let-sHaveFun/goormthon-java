@@ -44,3 +44,4 @@ out/
 
 docker-compose.yml
 
+/k8s/environment/
