@@ -14,18 +14,6 @@ spring:
     password: ${DB_PASSWORD:devpassword123!}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
-  # JPA ??
-  jpa:
-    hibernate:
-      ddl-auto: validate  # ???? ?? ??????? validate?
-    show-sql: ${LOG_LEVEL:INFO} == 'DEBUG'
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.MySQL8Dialect
-        format_sql: true
-        use_sql_comments: true
-    open-in-view: false
-
   # Redis ??
   data:
     redis:
