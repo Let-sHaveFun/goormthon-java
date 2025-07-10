@@ -1,118 +1,138 @@
 package com.mycompany.goormthonserver.entity;
 
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDateTime;
 import java.math.BigDecimal;
-import java.util.List;
+import java.time.LocalDateTime;
 
-/**
- * 관광지 엔티티
- * 제주도 주요 관광지 정보를 저장
- */
 @Entity
-@Table(name = "tourist_spots", indexes = {
-        @Index(name = "idx_location", columnList = "latitude, longitude"),
-        @Index(name = "idx_category", columnList = "category"),
-        @Index(name = "idx_name", columnList = "name")
-})
-@Getter @Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@Table(name = "tourist_spots")
+@Getter
+@Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class TouristSpot {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "external_id", unique = true, length = 100)
-    private String externalId; // 제주 Visit API ID
+    @Column(name = "external_id", length = 100, unique = true)
+    private String externalId;
 
-    @Column(name = "name", nullable = false, length = 255)
+    @Column(name = "name", length = 255, nullable = false)
     private String name;
 
     @Column(name = "address", length = 500)
     private String address;
 
-    @Column(name = "latitude", nullable = false, precision = 10, scale = 8)
+    @Column(name = "latitude", precision = 10, scale = 8, nullable = false)
     private BigDecimal latitude;
 
-    @Column(name = "longitude", nullable = false, precision = 11, scale = 8)
+    @Column(name = "longitude", precision = 11, scale = 8, nullable = false)
     private BigDecimal longitude;
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "image_url", length = 500)
-    private String imageUrl;
-
     @Column(name = "category", length = 100)
     private String category;
 
-    @Column(name = "phone", length = 50)
-    private String phone;
+    @Column(name = "tag", length = 200)
+    private String tag;
 
-    @Column(name = "operating_hours", length = 200)
-    private String operatingHours;
+    @Column(name = "introduction", columnDefinition = "TEXT")
+    private String introduction;
 
+    @Column(name = "imgpath", length = 500)
+    private String imgPath;
+
+    @Column(name = "script", columnDefinition = "TEXT")
+    private String script;
+
+    @Column(name = "audioUrl", length = 500)
+    private String audioUrl;
+
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    // 연관관계 매핑
-    @OneToMany(mappedBy = "touristSpot", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<AudioContent> audioContents;
-
-    @OneToMany(mappedBy = "touristSpot", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<QrMapping> qrMappings;
-
-    @OneToMany(mappedBy = "touristSpot", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<UserCollection> userCollections;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
+    // 생성자
+    public TouristSpot(String externalId, String name, String address,
+                       BigDecimal latitude, BigDecimal longitude) {
+        this.externalId = externalId;
+        this.name = name;
+        this.address = address;
+        this.latitude = latitude;
+        this.longitude = longitude;
     }
 
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+    // Builder 패턴을 위한 정적 메서드
+    public static TouristSpot create(String externalId, String name, String address,
+                                     BigDecimal latitude, BigDecimal longitude) {
+        return new TouristSpot(externalId, name, address, latitude, longitude);
     }
 
-    // 비즈니스 메서드
-    /**
-     * 두 좌표 간의 거리 계산 (km)
-     */
-    public double calculateDistance(BigDecimal lat, BigDecimal lng) {
-        double R = 6371; // 지구 반지름 (km)
-        double dLat = Math.toRadians(lat.subtract(latitude).doubleValue());
-        double dLng = Math.toRadians(lng.subtract(longitude).doubleValue());
-
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(Math.toRadians(latitude.doubleValue())) *
-                        Math.cos(Math.toRadians(lat.doubleValue())) *
-                        Math.sin(dLng / 2) * Math.sin(dLng / 2);
-
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
+    // 비즈니스 로직 메서드
+    public void updateBasicInfo(String name, String address, String description) {
+        this.name = name;
+        this.address = address;
+        this.description = description;
     }
 
-    /**
-     * 활성화된 오디오 콘텐츠 개수
-     */
-    public long getActiveAudioContentCount() {
-        if (audioContents == null) return 0;
-        return audioContents.stream()
-                .filter(content -> "COMPLETED".equals(content.getGenerationStatus()))
-                .count();
+    public void updateLocation(BigDecimal latitude, BigDecimal longitude) {
+        this.latitude = latitude;
+        this.longitude = longitude;
+    }
+
+    public void updateContent(String introduction, String script, String audioUrl) {
+        this.introduction = introduction;
+        this.script = script;
+        this.audioUrl = audioUrl;
+    }
+
+    public void updateCategory(String category, String tag) {
+        this.category = category;
+        this.tag = tag;
+    }
+
+    public void updateImagePath(String imgPath) {
+        this.imgPath = imgPath;
+    }
+
+    // 유틸리티 메서드
+    public boolean hasAudioContent() {
+        return audioUrl != null && !audioUrl.trim().isEmpty();
+    }
+
+    public boolean hasImage() {
+        return imgPath != null && !imgPath.trim().isEmpty();
+    }
+
+    public boolean isComplete() {
+        return name != null && !name.trim().isEmpty() &&
+                latitude != null && longitude != null &&
+                hasAudioContent();
+    }
+
+    @Override
+    public String toString() {
+        return "TouristSpot{" +
+                "id=" + id +
+                ", externalId='" + externalId + '\'' +
+                ", name='" + name + '\'' +
+                ", category='" + category + '\'' +
+                ", latitude=" + latitude +
+                ", longitude=" + longitude +
+                '}';
     }
 }
