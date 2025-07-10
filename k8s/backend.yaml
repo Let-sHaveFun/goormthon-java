@@ -34,11 +34,11 @@ spec:
               configMapKeyRef:
                 name: app-config
                 key: DB_NAME
-          - name: API_BASE_URL
+          - name: JEJU_VISIT_API_KEY
             valueFrom:
               configMapKeyRef:
                 name: app-config
-                key: API_BASE_URL
+                key: JEJU_VISIT_API_KEY
           - name: APP_ENV
             valueFrom:
               configMapKeyRef:
