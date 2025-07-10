@@ -1,0 +1,5 @@
+# requirements.txt
+# 제주 관광지 CSV 데이터 임포트를 위한 Python 패키지 (간단 버전)
+
+pymysql==1.1.0
+cryptography==41.0.8
