@@ -13,6 +13,7 @@ import java.util.List;
 public interface TouristSpotRepository extends JpaRepository<TouristSpot, Long> {
 
     // 기존 위경도 기반 검색
+
     @Query(value = """
         SELECT id, external_id, name, address, latitude, longitude, 
                description, category, tag, introduction, imgpath, script,
