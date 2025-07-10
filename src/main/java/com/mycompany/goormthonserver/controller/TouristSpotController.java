@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.List;
 
+
 @RestController
 @RequestMapping("/tour-spots")
 @RequiredArgsConstructor
@@ -23,12 +24,8 @@ public class TouristSpotController {
             @RequestParam BigDecimal longitude,
             @RequestParam(defaultValue = "10") double radius) {
 
-        // 디버깅 로그 추가
-        log.info("요청 파라미터 - latitude: {}, longitude: {}, radius: {}", latitude, longitude, radius);
-
         // 입력 유효성 검증
         if (latitude == null || longitude == null) {
-            log.warn("필수 파라미터 누락 - latitude: {}, longitude: {}", latitude, longitude);
             return ResponseEntity.badRequest().build();
         }
 

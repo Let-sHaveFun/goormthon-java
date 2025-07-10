@@ -29,60 +29,24 @@ public class TouristSpotService {
         List<Object[]> results = touristSpotRepository.findNearbyTouristSpots(
                 latitude, longitude, radius, limit);
 
-        // 디버깅을 위한 로그 추가
-        if (!results.isEmpty()) {
-            Object[] firstRow = results.get(0);
-            log.info("첫 번째 행 데이터 개수: {}", firstRow.length);
-            for (int i = 0; i < firstRow.length; i++) {
-                log.info("Index {}: {} ({})", i, firstRow[i],
-                        firstRow[i] != null ? firstRow[i].getClass().getSimpleName() : "null");
-            }
-        }
-
         return results.stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 
     private TouristSpotLocationDto convertToDto(Object[] row) {
-        try {
-            // 올바른 인덱스로 수정
-            return TouristSpotLocationDto.builder()
-                    .externalId(safeToString(row[0]))       // external_id
-                    .name(safeToString(row[1]))             // name
-                    .address(safeToString(row[2]))          // address
-                    .latitude(safeToBigDecimal(row[3]))     // latitude
-                    .longitude(safeToBigDecimal(row[4]))    // longitude
-                    .description(safeToString(row[5]))      // description
-                    .category(safeToString(row[6]))         // category
-                    .tag(safeToString(row[7]))              // tag
-                    .introduction(safeToString(row[8]))     // introduction
-                    .imgPath(safeToString(row[9]))          // imgpath
-                    .distance(safeToDouble(row[14]))        // distance (calculated)
-                    .build();
-        } catch (Exception e) {
-            log.error("DTO 변환 중 오류 발생: {}", e.getMessage());
-            log.error("Row 데이터: {}", java.util.Arrays.toString(row));
-            throw e;
-        }
-    }
-
-    // 안전한 타입 변환 헬퍼 메서드들
-    private String safeToString(Object obj) {
-        return obj != null ? obj.toString() : null;
-    }
-
-    private BigDecimal safeToBigDecimal(Object obj) {
-        if (obj == null) return null;
-        if (obj instanceof BigDecimal) return (BigDecimal) obj;
-        if (obj instanceof Number) return BigDecimal.valueOf(((Number) obj).doubleValue());
-        return new BigDecimal(obj.toString());
-    }
-
-    private Double safeToDouble(Object obj) {
-        if (obj == null) return null;
-        if (obj instanceof Double) return (Double) obj;
-        if (obj instanceof Number) return ((Number) obj).doubleValue();
-        return Double.valueOf(obj.toString());
+        return TouristSpotLocationDto.builder()
+                .externalId((String) row[1])  // external_id
+                .name((String) row[2])        // name
+                .address((String) row[3])     // address
+                .latitude((BigDecimal) row[4]) // latitude
+                .longitude((BigDecimal) row[5]) // longitude
+                .description((String) row[6]) // description
+                .category((String) row[7])    // category
+                .tag((String) row[8])         // tag
+                .introduction((String) row[9]) // introduction
+                .imgPath((String) row[10])    // imgpath
+                .distance(((Number) row[14]).doubleValue()) // distance (calculated)
+                .build();
     }
 }

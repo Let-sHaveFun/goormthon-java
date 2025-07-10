@@ -1,5 +1,6 @@
 package com.mycompany.goormthonserver.entity;
 
+
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
