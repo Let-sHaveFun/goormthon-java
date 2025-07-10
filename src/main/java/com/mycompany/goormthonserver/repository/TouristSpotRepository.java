@@ -12,8 +12,11 @@ import java.util.List;
 @Repository
 public interface TouristSpotRepository extends JpaRepository<TouristSpot, Long> {
 
+
     @Query(value = """
-        SELECT *, 
+        SELECT id, external_id, name, address, latitude, longitude, 
+               description, category, tag, introduction, imgpath, script,
+               created_at, updated_at,
                (6371 * acos(
                    cos(radians(:latitude)) * cos(radians(latitude)) * 
                    cos(radians(longitude) - radians(:longitude)) + 
