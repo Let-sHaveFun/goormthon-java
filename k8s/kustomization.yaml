@@ -5,5 +5,5 @@ resources:
 
 configMapGenerator:
   - name: java-backend-env
-    envs:  # files가 아니라 envs
+    envs:  # files가 아니라~~ envs
       - environment/env
