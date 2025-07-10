@@ -54,17 +54,6 @@ spec:
               configMapKeyRef:
                 name: app-config
                 key: SERVER_PORT
-          - name: SPRING_PROFILES_ACTIVE
-            valueFrom:
-              configMapKeyRef:
-                name: app-config
-                key: SPRING_PROFILES_ACTIVE
-          - name: JAVA_OPTS
-            valueFrom:
-              configMapKeyRef:
-                name: app-config
-                key: JAVA_OPTS
-
           # 2. Secret에서 가져오기 (민감한 정보)
           - name: DB_USERNAME
             valueFrom:
@@ -76,16 +65,12 @@ spec:
               secretKeyRef:
                 name: app-secret
                 key: DB_PASSWORD
-          - name: API_KEY
+          - name: JEJU_VISIT_API_KEY
             valueFrom:
               secretKeyRef:
                 name: app-secret
-                key: API_KEY
-          - name: JWT_SECRET
-            valueFrom:
-              secretKeyRef:
-                name: app-secret
-                key: JWT_SECRET
+                key: JEJU_VISIT_API_KEY
+
           # 3. 환경변수 파일 전체 로드 (envFrom 사용)
         envFrom:
           - configMapRef:
