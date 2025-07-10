@@ -73,7 +73,7 @@ public interface UserCollectionRepository extends JpaRepository<UserCollection, 
      */
     @Query("SELECT uc.touristSpot, COUNT(uc) as collectionCount FROM UserCollection uc " +
             "GROUP BY uc.touristSpot " +
-            "ORDER BY collectionCount DESC")
+            "ORDER BY COUNT(uc) DESC")
     List<Object[]> findPopularTouristSpots();
 
     /**
@@ -84,14 +84,16 @@ public interface UserCollectionRepository extends JpaRepository<UserCollection, 
     List<UserCollection> findRecentCollections();
 
     /**
-     * 사용자별 수집 완료율 계산용 데이터
+     * 사용자별 수집 완료율 계산용 데이터 (간소화)
      */
-    @Query("SELECT " +
-            "COUNT(uc) as collectedCount, " +
-            "(SELECT COUNT(t) FROM TouristSpot t) as totalSpots " +
-            "FROM UserCollection uc " +
-            "WHERE uc.userId = :userId")
-    Object[] getUserCollectionProgress(@Param("userId") String userId);
+    @Query("SELECT COUNT(uc) as collectedCount FROM UserCollection uc WHERE uc.userId = :userId")
+    Long getUserCollectionCount(@Param("userId") String userId);
+
+    /**
+     * 전체 관광지 수 조회
+     */
+    @Query("SELECT COUNT(t) FROM TouristSpot t")
+    Long getTotalTouristSpotCount();
 
     /**
      * 오디오와 함께 수집된 관광지
@@ -113,19 +115,16 @@ public interface UserCollectionRepository extends JpaRepository<UserCollection, 
             "WHERE uc.userId = :userId " +
             "AND uc.collectedAt >= :startDate " +
             "GROUP BY DATE(uc.collectedAt) " +
-            "ORDER BY collectionDate DESC")
+            "ORDER BY DATE(uc.collectedAt) DESC")
     List<Object[]> getUserDailyCollectionStats(
             @Param("userId") String userId,
             @Param("startDate") LocalDateTime startDate);
 
     /**
-     * 전체 사용자 수집 통계
+     * 전체 사용자 수집 통계 (간소화 버전)
      */
-    @Query("SELECT COUNT(DISTINCT uc.userId) as totalUsers, " +
-            "COUNT(uc) as totalCollections, " +
-            "AVG(uc_count.collection_count) as avgCollectionsPerUser " +
-            "FROM UserCollection uc, " +
-            "(SELECT userId, COUNT(*) as collection_count FROM UserCollection GROUP BY userId) uc_count")
+    @Query("SELECT COUNT(DISTINCT uc.userId) as totalUsers, COUNT(uc) as totalCollections " +
+            "FROM UserCollection uc")
     Object[] getOverallCollectionStatistics();
 
     /**

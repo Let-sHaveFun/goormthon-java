@@ -71,10 +71,10 @@ public class SwaggerConfig {
     private List<Server> getServers() {
         return List.of(
                 new Server()
-                        .url("http://localhost:8080")
+                        .url("http://localhost:8080/api")
                         .description("로컬 개발 서버"),
                 new Server()
-                        .url("https://api.jejuaudio.com")
+                        .url("https://dormung.goorm.training/api")
                         .description("운영 서버")
         );
     }

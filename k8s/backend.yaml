@@ -17,9 +17,81 @@ spec:
         image: 837126493345.dkr.ecr.ap-northeast-2.amazonaws.com/team5/backend:32
         ports:
         - containerPort: 8080
+        env:
+          # 1. ConfigMap에서 가져오기
+          - name: DB_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: app-config
+                key: DB_HOST
+          - name: DB_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: app-config
+                key: DB_PORT
+          - name: DB_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: app-config
+                key: DB_NAME
+          - name: API_BASE_URL
+            valueFrom:
+              configMapKeyRef:
+                name: app-config
+                key: API_BASE_URL
+          - name: APP_ENV
+            valueFrom:
+              configMapKeyRef:
+                name: app-config
+                key: APP_ENV
+          - name: LOG_LEVEL
+            valueFrom:
+              configMapKeyRef:
+                name: app-config
+                key: LOG_LEVEL
+          - name: SERVER_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: app-config
+                key: SERVER_PORT
+          - name: SPRING_PROFILES_ACTIVE
+            valueFrom:
+              configMapKeyRef:
+                name: app-config
+                key: SPRING_PROFILES_ACTIVE
+          - name: JAVA_OPTS
+            valueFrom:
+              configMapKeyRef:
+                name: app-config
+                key: JAVA_OPTS
+
+          # 2. Secret에서 가져오기 (민감한 정보)
+          - name: DB_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: app-secret
+                key: DB_USERNAME
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: app-secret
+                key: DB_PASSWORD
+          - name: API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: app-secret
+                key: API_KEY
+          - name: JWT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: app-secret
+                key: JWT_SECRET
+          # 3. 환경변수 파일 전체 로드 (envFrom 사용)
         envFrom:
           - configMapRef:
-              name: java-backend-env
+              name: app-config
+          - secretRef:
+              name: app-secret
 #        volumeMounts:
 #        - name: config-volume
 #          mountPath: /app/config
