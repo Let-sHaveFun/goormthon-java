@@ -50,4 +50,45 @@ public class TouristSpotService {
                 .distance(((Number) row[14]).doubleValue()) // distance (calculated)
                 .build();
     }
+
+    // 키워드 검색 (거리 포함)
+    public List<TouristSpotLocationDto> searchByKeyword(String keyword,
+                                                        BigDecimal userLatitude,
+                                                        BigDecimal userLongitude,
+                                                        int limit) {
+
+        log.info("키워드 검색 (거리 포함) - keyword: '{}', userLat: {}, userLng: {}, limit: {}",
+                keyword, userLatitude, userLongitude, limit);
+
+        // 키워드 유효성 검증
+        if (keyword == null || keyword.trim().isEmpty()) {
+            log.warn("검색 키워드가 비어있음");
+            return List.of();
+        }
+
+        // 키워드 정리 (앞뒤 공백 제거)
+        String cleanKeyword = keyword.trim();
+
+        List<Object[]> results;
+
+        // 사용자 위치 정보가 있으면 거리 기준으로 정렬
+        if (userLatitude != null && userLongitude != null) {
+            results = touristSpotRepository.findByNameContainingWithDistance(
+                    cleanKeyword, userLatitude, userLongitude, limit);
+            log.info("키워드 '{}' 검색 결과 (거리순): {}개", cleanKeyword, results.size());
+        } else {
+            // 사용자 위치 정보가 없으면 이름 기준으로 정렬
+            results = touristSpotRepository.findByNameContaining(cleanKeyword, limit);
+            log.info("키워드 '{}' 검색 결과 (이름순): {}개", cleanKeyword, results.size());
+        }
+
+        return results.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+    // 키워드 검색 (거리 정보 없는 버전) - 하위 호환성
+    public List<TouristSpotLocationDto> searchByKeyword(String keyword, int limit) {
+        return searchByKeyword(keyword, null, null, limit);
+    }
 }
