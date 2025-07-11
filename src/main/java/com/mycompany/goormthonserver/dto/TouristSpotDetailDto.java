@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Getter
 @Builder
 @NoArgsConstructor
@@ -14,4 +16,13 @@ public class TouristSpotDetailDto {
     private String audioUrl;   // 오디오 URL
     private String script;     // 스크립트
     private String name;      // 관광지 제목
+    private String externalId;
+    private String address;
+    private BigDecimal latitude;
+    private BigDecimal longitude;
+    private String description;
+    private String category;
+    private String tag;
+    private String introduction;
+    private Double distance; // km 단위
 }

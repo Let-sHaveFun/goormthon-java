@@ -80,6 +80,6 @@ public interface TouristSpotRepository extends JpaRepository<TouristSpot, Long> 
     );
 
 
-    @Query(value = "SELECT imgpath, audioUrl, script, name FROM tourist_spots WHERE external_id = :contentId", nativeQuery = true)
+    @Query(value = "SELECT imgpath, audioUrl, script, name, externalId, address, latitude, longitude, description, category, tag, introduction, distance FROM tourist_spots WHERE external_id = :contentId", nativeQuery = true)
     List<Object[]> findDetailByContentId(@Param("contentId") String contentId);
 }

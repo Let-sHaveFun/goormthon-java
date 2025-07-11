@@ -123,7 +123,16 @@ public class TouristSpotService {
                     .imgPath(safeToString(row[0]))    // imgpath
                     .audioUrl(safeToString(row[1]))   // audioUrl
                     .script(safeToString(row[2]))     // script
-                    .name(safeToString(row[3]))       // name
+                    .name(safeToString(row[3]))
+                    .externalId(safeToString(row[4])) // externalId;
+                    .address(safeToString(row[5]))    // address
+                    .latitude((BigDecimal) row[6])    // latitude
+                    .longitude((BigDecimal) row[7])   // longitude
+                    .description(safeToString(row[8])) // description
+                    .category(safeToString(row[9]))   // category
+                    .tag(safeToString(row[10]))        // tag
+                    .introduction(safeToString(row[11])) // introduction
+                    .distance(((Number) row[12]).doubleValue()) // distance
                     .build();
 
             log.info("contentId '{}' 상세 정보 조회 완료", contentId);
