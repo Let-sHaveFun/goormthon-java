@@ -123,6 +123,7 @@ public class TouristSpotService {
                     .imgPath(safeToString(row[0]))    // imgpath
                     .audioUrl(safeToString(row[1]))   // audioUrl
                     .script(safeToString(row[2]))     // script
+                    .name(safeToString(row[3]))       // name
                     .build();
 
             log.info("contentId '{}' 상세 정보 조회 완료", contentId);
