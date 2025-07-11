@@ -1,6 +1,7 @@
 // 수정된 Service 클래스
 package com.mycompany.goormthonserver.service;
 
+import com.mycompany.goormthonserver.dto.TouristSpotDetailDto;
 import com.mycompany.goormthonserver.dto.TouristSpotLocationDto;
 import com.mycompany.goormthonserver.repository.TouristSpotRepository;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 
@@ -90,5 +92,50 @@ public class TouristSpotService {
     // 키워드 검색 (거리 정보 없는 버전) - 하위 호환성
     public List<TouristSpotLocationDto> searchByKeyword(String keyword, int limit) {
         return searchByKeyword(keyword, null, null, limit);
+    }
+
+    public Optional<TouristSpotDetailDto> findDetailByContentId(String contentId) {
+
+        log.info("contentId 기반 상세 정보 조회 - contentId: '{}'", contentId);
+
+        if (contentId == null || contentId.trim().isEmpty()) {
+            log.warn("contentId가 비어있음");
+            return Optional.empty();
+        }
+
+        List<Object[]> results = touristSpotRepository.findDetailByContentId(contentId.trim());
+
+        if (results.isEmpty()) {
+            log.warn("contentId '{}' 에 해당하는 데이터가 없음", contentId);
+            return Optional.empty();
+        }
+
+        Object[] row = results.get(0);
+
+        try {
+            log.info("Row 길이: {}", row.length);
+            for (int i = 0; i < row.length; i++) {
+                log.info("Index {}: {} ({})", i, row[i],
+                        row[i] != null ? row[i].getClass().getSimpleName() : "null");
+            }
+
+            TouristSpotDetailDto detail = TouristSpotDetailDto.builder()
+                    .imgPath(safeToString(row[0]))    // imgpath
+                    .audioUrl(safeToString(row[1]))   // audioUrl
+                    .script(safeToString(row[2]))     // script
+                    .build();
+
+            log.info("contentId '{}' 상세 정보 조회 완료", contentId);
+            return Optional.of(detail);
+
+        } catch (Exception e) {
+            log.error("DTO 변환 중 오류 발생: {}", e.getMessage());
+            log.error("Row 데이터: {}", java.util.Arrays.toString(row));
+            return Optional.empty();
+        }
+    }
+
+    private String safeToString(Object obj) {
+        return obj != null ? obj.toString() : null;
     }
 }

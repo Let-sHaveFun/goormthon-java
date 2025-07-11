@@ -1,4 +1,5 @@
 package com.mycompany.goormthonserver.controller;
+import com.mycompany.goormthonserver.dto.TouristSpotDetailDto;
 import com.mycompany.goormthonserver.dto.TouristSpotLocationDto;
 import com.mycompany.goormthonserver.service.TouristSpotService;
 import lombok.RequiredArgsConstructor;
@@ -8,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/tour-spots")
@@ -96,6 +98,34 @@ public class TouristSpotController {
         }
 
         return ResponseEntity.ok(searchResults);
+    }
+
+    // contentId 기반 상세 정보 조회
+    @GetMapping("/detail")
+    public ResponseEntity<TouristSpotDetailDto> getDetailByContentId(
+            @RequestParam String contentId) {
+
+        // 입력 유효성 검증
+        if (contentId == null || contentId.trim().isEmpty()) {
+            log.warn("contentId 파라미터가 비어있음");
+            return ResponseEntity.badRequest().build();
+        }
+
+        // contentId 길이 제한
+        if (contentId.length() > 100) {
+            log.warn("contentId가 너무 긺: {}", contentId);
+            return ResponseEntity.badRequest().build();
+        }
+
+        Optional<TouristSpotDetailDto> detail = touristSpotService.findDetailByContentId(contentId);
+
+        if (detail.isEmpty()) {
+            log.info("contentId '{}'에 해당하는 데이터를 찾을 수 없음", contentId);
+            return ResponseEntity.notFound().build();
+        }
+
+        log.info("contentId '{}' 상세 정보 반환 완료", contentId);
+        return ResponseEntity.ok(detail.get());
     }
 
 }

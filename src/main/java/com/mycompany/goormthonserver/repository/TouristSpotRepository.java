@@ -8,6 +8,8 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
+
 //...
 @Repository
 public interface TouristSpotRepository extends JpaRepository<TouristSpot, Long> {
@@ -76,4 +78,8 @@ public interface TouristSpotRepository extends JpaRepository<TouristSpot, Long> 
             @Param("keyword") String keyword,
             @Param("limit") int limit
     );
+
+
+    @Query(value = "SELECT imgpath, audioUrl, script FROM tourist_spots WHERE external_id = :contentId", nativeQuery = true)
+    List<Object[]> findDetailByContentId(@Param("contentId") String contentId);
 }
