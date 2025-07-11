@@ -80,6 +80,23 @@ public interface TouristSpotRepository extends JpaRepository<TouristSpot, Long> 
     );
 
 
-    @Query(value = "SELECT imgpath, audioUrl, script, name, externalId, address, latitude, longitude, description, category, tag, introduction, distance FROM tourist_spots WHERE external_id = :contentId", nativeQuery = true)
-    List<Object[]> findDetailByContentId(@Param("contentId") String contentId);
+    @Query(value = """
+    SELECT imgpath, audioUrl, script, name, external_id, address, latitude, longitude, description, category, tag, introduction,
+           CASE 
+               WHEN :userLatitude IS NOT NULL AND :userLongitude IS NOT NULL THEN
+                   (6371 * acos(
+                       cos(radians(:userLatitude)) * cos(radians(latitude)) * 
+                       cos(radians(longitude) - radians(:userLongitude)) + 
+                       sin(radians(:userLatitude)) * sin(radians(latitude))
+                   ))
+               ELSE 0.0
+           END AS distance
+    FROM tourist_spots 
+    WHERE external_id = :contentId
+    """, nativeQuery = true)
+    List<Object[]> findDetailByContentId(
+            @Param("contentId") String contentId,
+            @Param("userLatitude") BigDecimal userLatitude,
+            @Param("userLongitude") BigDecimal userLongitude
+    );
 }

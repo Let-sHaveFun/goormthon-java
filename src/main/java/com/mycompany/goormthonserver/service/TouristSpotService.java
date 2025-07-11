@@ -94,7 +94,9 @@ public class TouristSpotService {
         return searchByKeyword(keyword, null, null, limit);
     }
 
-    public Optional<TouristSpotDetailDto> findDetailByContentId(String contentId) {
+    public Optional<TouristSpotDetailDto> findDetailByContentId(String contentId,
+                                                               BigDecimal userLatitude,
+                                                               BigDecimal userLongitude) {
 
         log.info("contentId 기반 상세 정보 조회 - contentId: '{}'", contentId);
 
@@ -103,7 +105,8 @@ public class TouristSpotService {
             return Optional.empty();
         }
 
-        List<Object[]> results = touristSpotRepository.findDetailByContentId(contentId.trim());
+        List<Object[]> results = touristSpotRepository.findDetailByContentId(
+                contentId.trim(), userLatitude, userLongitude);
 
         if (results.isEmpty()) {
             log.warn("contentId '{}' 에 해당하는 데이터가 없음", contentId);
@@ -124,7 +127,7 @@ public class TouristSpotService {
                     .audioUrl(safeToString(row[1]))   // audioUrl
                     .script(safeToString(row[2]))     // script
                     .name(safeToString(row[3]))
-                    .externalId(safeToString(row[4])) // externalId;
+                    .external_id(safeToString(row[4])) // externalId;
                     .address(safeToString(row[5]))    // address
                     .latitude((BigDecimal) row[6])    // latitude
                     .longitude((BigDecimal) row[7])   // longitude

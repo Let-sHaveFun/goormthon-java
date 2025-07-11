@@ -16,7 +16,7 @@ public class TouristSpotDetailDto {
     private String audioUrl;   // 오디오 URL
     private String script;     // 스크립트
     private String name;      // 관광지 제목
-    private String externalId;
+    private String external_id;
     private String address;
     private BigDecimal latitude;
     private BigDecimal longitude;

@@ -103,7 +103,9 @@ public class TouristSpotController {
     // contentId 기반 상세 정보 조회
     @GetMapping("/detail")
     public ResponseEntity<TouristSpotDetailDto> getDetailByContentId(
-            @RequestParam String contentId) {
+            @RequestParam String contentId,
+            @RequestParam(required = false) BigDecimal latitude,
+            @RequestParam(required = false) BigDecimal longitude) {
 
         // 입력 유효성 검증
         if (contentId == null || contentId.trim().isEmpty()) {
@@ -117,7 +119,7 @@ public class TouristSpotController {
             return ResponseEntity.badRequest().build();
         }
 
-        Optional<TouristSpotDetailDto> detail = touristSpotService.findDetailByContentId(contentId);
+        Optional<TouristSpotDetailDto> detail = touristSpotService.findDetailByContentId(contentId, latitude, longitude);
 
         if (detail.isEmpty()) {
             log.info("contentId '{}'에 해당하는 데이터를 찾을 수 없음", contentId);
