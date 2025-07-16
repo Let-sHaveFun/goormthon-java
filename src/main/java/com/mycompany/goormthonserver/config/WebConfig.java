@@ -10,7 +10,10 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins("https://dormung.netlify.app")
+                .allowedOrigins("https://dormung.netlify.app",
+                        "https://deploy-preview-22--dormung.netlify.app"
+                )
+
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowCredentials(true); // 필요 시 쿠키 사용 허용
     }
