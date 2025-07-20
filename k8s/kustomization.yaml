@@ -37,7 +37,7 @@ secretGenerator:
     literals:
       - DB_USERNAME=appuser
       - DB_PASSWORD=apppassword
-      - JEJU_VISIT_API_KEY=d5be1d79dbb241d8b27285a32ffce860
+      - JEJU_VISIT_API_KEY=.
       - LLM_API_KEY=your-llm-api-key-here
       - NAVER_CLIENT_ID=your-naver-client-id
       - NAVER_CLIENT_SECRET=your-naver-client-secret
