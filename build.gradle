@@ -17,6 +17,11 @@ configurations {
     compileOnly {
         extendsFrom annotationProcessor
     }
+
+    // 로깅 충돌 방지
+    all {
+        exclude group: 'org.slf4j', module: 'slf4j-simple'
+    }
 }
 
 repositories {
@@ -24,32 +29,39 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    // Spring Boot Starters
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'  // 헬스체크용 추가
+    implementation 'org.springframework.boot:spring-boot-starter-validation'  // 검증용 추가
 
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    runtimeOnly 'com.h2database:h2'
+    // 🤔 data-jdbc와 data-jpa 동시 사용 - 필요시에만 유지
+    implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
+
+    // 🤔 Thymeleaf - API 서버라면 불필요할 수 있음
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+
+    // API Documentation
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
 
     // Database
     runtimeOnly 'com.mysql:mysql-connector-j'
+    runtimeOnly 'com.h2database:h2'  // 개발/테스트용
 
-    // AWS SDK
+    // AWS SDK - 🚨 버전 업데이트 권장
     implementation 'com.amazonaws:aws-java-sdk-s3:1.12.565'
+    // 또는 AWS SDK v2 사용 권장:
+    // implementation 'software.amazon.awssdk:s3:2.20.0'
 
-    // JSON Processing
+    // JSON Processing (Spring Boot에 이미 포함되어 있지만 명시적 선언)
     implementation 'com.fasterxml.jackson.core:jackson-databind'
 
-    // JWT
-    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
-    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
-    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
-
-    // HTTP Client for External APIs
-    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    // JWT - 🚨 버전 업데이트 권장
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.3'  // 0.11.5 → 0.12.3
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.3'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.3'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
@@ -58,27 +70,46 @@ dependencies {
     // Development Tools
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
-    // Test Dependencies
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.testcontainers:mysql'
-    testImplementation 'org.testcontainers:junit-jupiter'
-    testRuntimeOnly 'com.h2database:h2'  // 테스트용 H2 데이터베이스
-    testImplementation('it.ozimov:embedded-redis:0.7.3') {
-        exclude group: 'org.slf4j', module: 'slf4j-simple'  // SLF4J Simple 제외
-    } // 테스트용 임베디드 Redis
-    testCompileOnly 'org.projectlombok:lombok'
-    testAnnotationProcessor 'org.projectlombok:lombok'
-
+    // Jakarta Annotations
     implementation 'jakarta.annotation:jakarta.annotation-api:2.1.1'
 
+    // Environment Variables
     implementation 'io.github.cdimascio:dotenv-java:3.0.0'
+
+    // Test Dependencies
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:mysql'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // 테스트용 H2 (중복 제거)
+    testRuntimeOnly 'com.h2database:h2'
+
+    // 임베디드 Redis (테스트용)
+    testImplementation('it.ozimov:embedded-redis:0.7.3') {
+        exclude group: 'org.slf4j', module: 'slf4j-simple'
+    }
+
+    // 테스트용 Lombok
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
 }
 
-// 프로파일별 빌드 설정
+// ✅ Spring Boot executable JAR 설정
 tasks.named('bootJar') {
+    enabled = true
     archiveFileName = 'app.jar'
+
+    // 메인 클래스 명시 (필요시)
+    // mainClass = 'com.mycompany.goormthonserver.GoormthonServerApplication'
 }
-// 테스트 설정
+
+// ✅ 일반 JAR 비활성화
+tasks.named('jar') {
+    enabled = false
+}
+
+// ✅ 테스트 설정
 tasks.named('test') {
     useJUnitPlatform()
 
@@ -95,13 +126,23 @@ tasks.named('test') {
     }
 }
 
-task dockerBuildFreeTier(type: Exec) {
-    group = 'docker'
-    description = 'Build Docker image optimized for AWS Free Tier'
+// ✅ 프리티어용 실행 설정
+tasks.named('bootRun') {
+    if (project.hasProperty('spring.profiles.active')) {
+        systemProperty 'spring.profiles.active', project.property('spring.profiles.active')
+    }
 
-    commandLine 'docker', 'build',
-            '--build-arg', 'SPRING_PROFILES_ACTIVE=freetier',
-            '-t', "${project.name}:freetier",
-            '-f', 'Dockerfile.freetier',
-            '.'
+    jvmArgs = [
+            '-Xms128m',
+            '-Xmx256m',
+            '-XX:+UseG1GC',
+            '-XX:MaxGCPauseMillis=200',
+            '-XX:+UseStringDeduplication'  // JDK 21에서 더 효율적
+    ]
+}
+
+// ✅ Gradle 래퍼 설정
+wrapper {
+    gradleVersion = '8.5'
+    distributionType = Wrapper.DistributionType.BIN
 }
