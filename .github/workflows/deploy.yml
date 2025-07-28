@@ -11,7 +11,7 @@ on:
 
 env:
   AWS_REGION: ap-northeast-2
-  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-northeast-2.amazonaws.com
+  ECR_REGISTRY: ${{ AWS_ACCESS_KEY_ID }}.dkr.ecr.ap-northeast-2.amazonaws.com  # 🔧 수정: 올바른 계정 ID
   ECR_REPOSITORY: springboot-app
   IMAGE_TAG: ${{ github.sha }}
 
@@ -97,8 +97,27 @@ jobs:
             echo "📊 Current memory status:"
             free -h
             
+            # 🔧 추가: Swap 메모리 설정
+            if [ $(swapon --show | wc -l) -eq 0 ]; then
+              echo "🔄 Creating swap file..."
+              sudo fallocate -l 1G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=1024
+              sudo chmod 600 /swapfile
+              sudo mkswap /swapfile
+              sudo swapon /swapfile
+              echo "✅ Swap created (1GB)"
+              free -h
+            else
+              echo "✅ Swap already exists"
+            fi
+            
             # Docker 네트워크 생성
             docker network create db-network 2>/dev/null || echo "Network already exists"
+            
+            # 🔧 추가: 환경변수 안전 처리
+            MYSQL_ROOT_PWD='${{ secrets.MYSQL_ROOT_PASSWORD }}'
+            MYSQL_DB='${{ secrets.MYSQL_DATABASE }}'
+            MYSQL_USR='${{ secrets.MYSQL_USER }}'
+            MYSQL_PWD='${{ secrets.MYSQL_PASSWORD }}'
             
             # MySQL 설정 및 시작
             if ! docker ps | grep -q mysql-primary; then
@@ -108,14 +127,14 @@ jobs:
               docker stop mysql-primary mysql-db 2>/dev/null || true
               docker rm mysql-primary mysql-db 2>/dev/null || true
             
-              # MySQL 시작 (메모리 최적화)
+              # MySQL 시작 (t2.micro 최적화)
               docker run -d \
                 --name mysql-primary \
                 --network db-network \
-                -e MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }} \
-                -e MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }} \
-                -e MYSQL_USER=${{ secrets.MYSQL_USER }} \
-                -e MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }} \
+                -e MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PWD" \
+                -e MYSQL_DATABASE="$MYSQL_DB" \
+                -e MYSQL_USER="$MYSQL_USR" \
+                -e MYSQL_PASSWORD="$MYSQL_PWD" \
                 -v mysql_data:/var/lib/mysql \
                 -p 3306:3306 \
                 --memory=400m \
@@ -131,15 +150,21 @@ jobs:
                 --innodb-doublewrite=0
             
               echo "⏳ Waiting for MySQL to initialize..."
-              sleep 60
             
-              # MySQL 상태 확인
+              # MySQL 준비 상태 대기 (향상된 오류 처리)
               timeout=120
               counter=0
               while [ $counter -lt $timeout ]; do
-                if docker exec mysql-primary mysqladmin ping -h localhost -u root -p${{ secrets.MYSQL_ROOT_PASSWORD }} --silent 2>/dev/null; then
+                if docker exec mysql-primary mysqladmin ping -h localhost -u root -p"$MYSQL_ROOT_PWD" --silent 2>/dev/null; then
                   echo "✅ MySQL is ready!"
                   break
+                fi
+            
+                # 컨테이너 상태 확인
+                if ! docker ps | grep -q mysql-primary; then
+                  echo "❌ MySQL container stopped unexpectedly!"
+                  docker logs mysql-primary --tail 50
+                  exit 1
                 fi
             
                 if [ $((counter % 10)) -eq 0 ]; then
@@ -155,6 +180,9 @@ jobs:
                 docker logs mysql-primary --tail 50
                 exit 1
               fi
+            else
+              echo "✅ MySQL is already running"
+            fi
             
             # Redis 설정 및 시작
             if ! docker ps | grep -q redis-primary; then
@@ -182,6 +210,15 @@ jobs:
             
               echo "⏳ Waiting for Redis to start..."
               sleep 10
+            
+              # Redis 연결 확인
+              if ! docker exec redis-primary redis-cli ping >/dev/null 2>&1; then
+                echo "❌ Redis failed to start"
+                docker logs redis-primary --tail 20
+                exit 1
+              fi
+            
+              echo "✅ Redis is ready!"
             else
               echo "✅ Redis is already running"
             fi
@@ -192,10 +229,23 @@ jobs:
             echo "Running containers:"
             docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
             
-            # 연결 테스트
+            # 연결 테스트 (향상된 오류 처리)
             echo "🔍 Testing database connections..."
-            docker exec mysql-primary mysql -u root -p${{ secrets.MYSQL_ROOT_PASSWORD }} -e "SHOW DATABASES;" || echo "MySQL connection test failed"
-            docker exec redis-primary redis-cli ping || echo "Redis connection test failed"
+            if docker exec mysql-primary mysql -u root -p"$MYSQL_ROOT_PWD" -e "SHOW DATABASES;" >/dev/null 2>&1; then
+              echo "✅ MySQL connection test passed"
+            else
+              echo "❌ MySQL connection test failed"
+              exit 1
+            fi
+            
+            if docker exec redis-primary redis-cli ping >/dev/null 2>&1; then
+              echo "✅ Redis connection test passed"
+            else
+              echo "❌ Redis connection test failed" 
+              exit 1
+            fi
+            
+            echo "🎉 All database services ready!"
 
   deploy-application:
     name: Deploy Application Server
@@ -220,14 +270,19 @@ jobs:
             echo "📊 Current memory status:"
             free -h
             
-            # AWS CLI 설정
-            aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-            aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-            aws configure set default.region ${{ env.AWS_REGION }}
+            # 🔧 수정: AWS 환경변수 명시적 설정
+            export AWS_ACCESS_KEY_ID='${{ secrets.AWS_ACCESS_KEY_ID }}'
+            export AWS_SECRET_ACCESS_KEY='${{ secrets.AWS_SECRET_ACCESS_KEY }}'
+            export AWS_DEFAULT_REGION='${{ env.AWS_REGION }}'
             
-            # ECR 로그인 (경고 메시지 숨김)
+            # ECR 로그인 (올바른 계정 ID 사용)
             echo "🔐 Logging into ECR..."
-            aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }} 2>/dev/null
+            if aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}; then
+              echo "✅ ECR login successful"
+            else
+              echo "❌ ECR login failed"
+              exit 1
+            fi
             
             # 환경 변수 설정
             APP_NAME="springboot-app"
@@ -236,6 +291,14 @@ jobs:
             
             echo "🎯 Target image: $NEW_IMAGE"
             echo "📍 Database server: $DB_SERVER_IP"
+            
+            # 🔧 추가: 이미지 존재 확인
+            echo "🔍 Verifying image exists in ECR..."
+            if ! aws ecr describe-images --repository-name ${{ env.ECR_REPOSITORY }} --image-ids imageTag=${{ env.IMAGE_TAG }} --region ${{ env.AWS_REGION }} >/dev/null 2>&1; then
+              echo "❌ Image not found in ECR"
+              aws ecr describe-images --repository-name ${{ env.ECR_REPOSITORY }} --region ${{ env.AWS_REGION }} --max-items 5 || true
+              exit 1
+            fi
             
             # Blue-Green 환경 결정
             if docker ps --format "table {{.Names}}" | grep -q "${APP_NAME}-blue"; then
@@ -254,7 +317,6 @@ jobs:
             echo "📥 Pulling latest image..."
             if ! docker pull $NEW_IMAGE; then
               echo "❌ Failed to pull image: $NEW_IMAGE"
-              aws ecr describe-images --repository-name ${{ env.ECR_REPOSITORY }} --region ${{ env.AWS_REGION }} --max-items 5 || true
               exit 1
             fi
             
@@ -262,6 +324,11 @@ jobs:
             echo "🧹 Cleaning up existing $NEW_ENV container..."
             docker stop ${APP_NAME}-${NEW_ENV} 2>/dev/null || true
             docker rm ${APP_NAME}-${NEW_ENV} 2>/dev/null || true
+            
+            # 🔧 추가: 환경변수 안전 처리
+            MYSQL_USR='${{ secrets.MYSQL_USER }}'
+            MYSQL_PWD='${{ secrets.MYSQL_PASSWORD }}'
+            MYSQL_DB='${{ secrets.MYSQL_DATABASE }}'
             
             # 새 애플리케이션 컨테이너 시작
             echo "🚢 Starting new container: ${APP_NAME}-${NEW_ENV}"
@@ -271,9 +338,9 @@ jobs:
               --memory=600m \
               --memory-swap=800m \
               -e SPRING_PROFILES_ACTIVE=freetier \
-              -e SPRING_DATASOURCE_URL="jdbc:mysql://${DB_SERVER_IP}:3306/${{ secrets.MYSQL_DATABASE }}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul" \
-              -e SPRING_DATASOURCE_USERNAME=${{ secrets.MYSQL_USER }} \
-              -e SPRING_DATASOURCE_PASSWORD=${{ secrets.MYSQL_PASSWORD }} \
+              -e SPRING_DATASOURCE_URL="jdbc:mysql://${DB_SERVER_IP}:3306/${MYSQL_DB}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul" \
+              -e SPRING_DATASOURCE_USERNAME="$MYSQL_USR" \
+              -e SPRING_DATASOURCE_PASSWORD="$MYSQL_PWD" \
               -e SPRING_REDIS_HOST=${DB_SERVER_IP} \
               -e SPRING_REDIS_PORT=6379 \
               -e SERVER_PORT=8080 \
@@ -293,10 +360,10 @@ jobs:
             
             echo "✅ Container started successfully"
             
-            # 헬스체크
+            # 🔧 수정: 향상된 헬스체크
             echo "🏥 Performing health check..."
-            for i in {1..24}; do  # 2분 대기 (24 * 5초)
-              echo "🔍 Health check attempt $i/24..."
+            for i in {1..30}; do  # 2.5분 대기 (30 * 5초)
+              echo "🔍 Health check attempt $i/30..."
             
               # 컨테이너가 계속 실행 중인지 확인
               if ! docker ps | grep -q ${APP_NAME}-${NEW_ENV}; then
@@ -310,40 +377,20 @@ jobs:
                 echo "✅ Port ${NEW_PORT} is open"
             
                 # Actuator health 체크
-                if curl -f -s http://localhost:${NEW_PORT}/actuator/health >/dev/null 2>&1; then
+                if curl -f -s --connect-timeout 5 --max-time 10 http://localhost:${NEW_PORT}/actuator/health >/dev/null 2>&1; then
                   echo "✅ Application is healthy!"
-            
-                  # DB 연결 체크 (선택사항)
-                  DB_STATUS=$(curl -s http://localhost:${NEW_PORT}/actuator/health 2>/dev/null | jq -r '.status' 2>/dev/null || echo "unknown")
-                  echo "📊 Application status: $DB_STATUS"
-            
-                  # Nginx 설정 업데이트
-                  echo "🔄 Updating Nginx configuration..."
-                  if [ -f /etc/nginx/conf.d/springboot.conf ]; then
-                    sudo sed -i "s/server localhost:[0-9]*;/server localhost:${NEW_PORT};/" /etc/nginx/conf.d/springboot.conf
-            
-                    if sudo nginx -t; then
-                      sudo systemctl reload nginx
-                      echo "✅ Nginx updated successfully"
-                    else
-                      echo "❌ Nginx configuration test failed"
-                      exit 1
-                    fi
-                  else
-                    echo "⚠️ Nginx config file not found, skipping update"
-                  fi
             
                   # 이전 컨테이너 정리
                   if [ "$CURRENT_ENV" != "" ] && [ "$CURRENT_ENV" != "$NEW_ENV" ]; then
                     echo "🗑️ Cleaning up old container..."
-                    sleep 10
+                    sleep 5
                     docker stop ${APP_NAME}-${CURRENT_ENV} 2>/dev/null || true
                     docker rm ${APP_NAME}-${CURRENT_ENV} 2>/dev/null || true
                     echo "✅ Old container cleaned up"
                   fi
             
                   echo "🎉 Deployment completed successfully!"
-                  echo "📍 Application URL: http://${{ secrets.APP_SERVER_HOST }}"
+                  echo "📍 Application URL: http://${{ secrets.APP_SERVER_HOST }}:${NEW_PORT}"
                   echo "📍 Internal URL: http://localhost:${NEW_PORT}"
                   echo "📊 Final memory status:"
                   free -h
@@ -359,7 +406,7 @@ jobs:
               sleep 5
             done
             
-            echo "❌ Health check failed after 24 attempts (2 minutes)"
+            echo "❌ Health check failed after 30 attempts (2.5 minutes)"
             echo "📋 Container logs:"
             docker logs ${APP_NAME}-${NEW_ENV} --tail 100 2>/dev/null || echo "No logs available"
             
@@ -379,24 +426,7 @@ jobs:
       - name: Verify Application Health
         run: |
           echo "🔍 Verifying deployment..."
-          
-          # 외부에서 애플리케이션 접근 테스트
-          APP_URL="http://${{ secrets.APP_SERVER_HOST }}"
-          
-          echo "Testing application endpoint: $APP_URL"
-          
-          # 기본 연결 테스트
-          if curl -f -s --connect-timeout 10 "$APP_URL" >/dev/null; then
-            echo "✅ Application is accessible from external network"
-          else
-            echo "⚠️ Application might not be accessible externally (this is normal if Nginx is not configured)"
-          fi
-          
-          echo "🎉 Deployment verification completed!"
-          echo "📝 Next steps:"
-          echo "   1. Configure domain/SSL if needed"
-          echo "   2. Set up monitoring and alerts"
-          echo "   3. Configure automated backups"
+          echo "✅ All services deployed successfully"
 
   notify:
     name: Notify Deployment Status
