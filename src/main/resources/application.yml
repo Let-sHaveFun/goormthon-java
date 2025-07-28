@@ -200,7 +200,7 @@ management:
   endpoint:
     health:
       show-details: when-authorized
-      show-components: false      # 상세 정보 비활성화
+      show-components: NEVER      # 상세 정보 비활성화
   health:
     redis:
       enabled: true
