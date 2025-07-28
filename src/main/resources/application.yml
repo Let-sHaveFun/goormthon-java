@@ -199,7 +199,7 @@ management:
         include: health,info
   endpoint:
     health:
-      show-details: when-authorized
+      show-details: never
       show-components: NEVER      # 상세 정보 비활성화
   health:
     redis:
