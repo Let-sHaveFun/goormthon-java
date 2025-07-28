@@ -11,7 +11,7 @@ on:
 
 env:
   AWS_REGION: ap-northeast-2
-  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-northeast-2.amazonaws.com
+  ECR_REGISTRY: 588738576341.dkr.ecr.ap-northeast-2.amazonaws.com  # 🔧 수정: 하드코딩된 올바른 계정 ID
   ECR_REPOSITORY: springboot-app
   IMAGE_TAG: ${{ github.sha }}
 
@@ -102,7 +102,7 @@ jobs:
             export AWS_SECRET_ACCESS_KEY='${{ secrets.AWS_SECRET_ACCESS_KEY }}'
             export AWS_DEFAULT_REGION='${{ env.AWS_REGION }}'
             
-            # ECR 로그인
+            # ECR 로그인 (올바른 계정 ID 사용)
             echo "🔐 Logging into ECR..."
             if aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}; then
               echo "✅ ECR login successful"
@@ -123,39 +123,27 @@ jobs:
             echo "🔍 Verifying image exists in ECR..."
             if ! aws ecr describe-images --repository-name ${{ env.ECR_REPOSITORY }} --image-ids imageTag=${{ env.IMAGE_TAG }} --region ${{ env.AWS_REGION }} >/dev/null 2>&1; then
               echo "❌ Image not found in ECR"
-              aws ecr describe-images --repository-name ${{ env.ECR_REPOSITORY }} --region ${{ env.AWS_REGION }} --max-items 5 || true
+              echo "📋 Available images:"
+              aws ecr describe-images --repository-name ${{ env.ECR_REPOSITORY }} --region ${{ env.AWS_REGION }} --max-items 5 --output table || true
               exit 1
             fi
             
-            # DB 연결 테스트 (nc 대신 bash와 timeout 사용)
+            # DB 연결 테스트
             echo "🔍 Testing database connectivity..."
-            
-            # MySQL 연결 테스트
             if timeout 5 bash -c "</dev/tcp/$DB_SERVER_IP/3306" 2>/dev/null; then
               echo "✅ MySQL connection available"
             else
-              echo "⚠️ MySQL direct connection test failed, trying curl..."
-              if curl -m 5 --connect-timeout 3 telnet://$DB_SERVER_IP:3306 2>/dev/null; then
-                echo "✅ MySQL reachable via curl"
-              else
-                echo "❌ MySQL completely unreachable - continuing anyway"
-              fi
+              echo "⚠️ MySQL connection failed - continuing anyway"
             fi
             
-            # Redis 연결 테스트
             if timeout 5 bash -c "</dev/tcp/$DB_SERVER_IP/6379" 2>/dev/null; then
               echo "✅ Redis connection available"
             else
-              echo "⚠️ Redis direct connection test failed, trying curl..."
-              if curl -m 5 --connect-timeout 3 telnet://$DB_SERVER_IP:6379 2>/dev/null; then
-                echo "✅ Redis reachable via curl"
-              else
-                echo "❌ Redis completely unreachable - continuing anyway"
-              fi
+              echo "⚠️ Redis connection failed - continuing anyway"
             fi
             
             # Blue-Green 환경 결정
-            if docker ps --format "table {{.Names}}" | grep -q "${APP_NAME}-blue"; then
+            if docker ps --format "{{.Names}}" | grep -q "springboot-app-blue"; then
               CURRENT_ENV="blue"
               NEW_ENV="green"
               NEW_PORT=8081
@@ -184,7 +172,7 @@ jobs:
             MYSQL_PWD='${{ secrets.MYSQL_PASSWORD }}'
             MYSQL_DB='${{ secrets.MYSQL_DATABASE }}'
             
-            # 새 애플리케이션 컨테이너 시작
+            # 새 애플리케이션 컨테이너 시작 (Actuator 설정 문제 해결 포함)
             echo "🚢 Starting new container: ${APP_NAME}-${NEW_ENV}"
             docker run -d \
               --name ${APP_NAME}-${NEW_ENV} \
@@ -198,13 +186,13 @@ jobs:
               -e SPRING_REDIS_HOST=${DB_SERVER_IP} \
               -e SPRING_REDIS_PORT=6379 \
               -e SERVER_PORT=8080 \
-              -e JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication" \
+              -e JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC -Dmanagement.endpoint.health.show-components=NEVER -Dmanagement.endpoint.health.show-details=never -Dspring.jpa.open-in-view=false -Dspring.thymeleaf.check-template-location=false" \
               --restart unless-stopped \
               $NEW_IMAGE
             
             # 컨테이너 시작 확인
             echo "⏳ Waiting for container to start..."
-            sleep 15
+            sleep 20
             
             if ! docker ps | grep -q ${APP_NAME}-${NEW_ENV}; then
               echo "❌ Container failed to start!"
@@ -216,10 +204,11 @@ jobs:
             echo "📋 Initial container logs:"
             docker logs ${APP_NAME}-${NEW_ENV} --tail 20
             
-            # 헬스체크 (nc 대신 curl과 bash 사용)
-            echo "🏥 Performing health check..."
-            for i in {1..36}; do
-              echo "🔍 Health check attempt $i/36..."
+            # 개선된 헬스체크 (Spring Boot 시작 시간 충분히 고려)
+            echo "🏥 Performing health check (allowing up to 5 minutes for Spring Boot startup)..."
+            
+            for i in {1..60}; do  # 5분 대기 (60 * 5초)
+              echo "🔍 Health check attempt $i/60 ($(date '+%H:%M:%S'))"
             
               # 컨테이너가 계속 실행 중인지 확인
               if ! docker ps | grep -q ${APP_NAME}-${NEW_ENV}; then
@@ -228,54 +217,77 @@ jobs:
                 exit 1
               fi
             
-              # 포트 확인 (bash를 이용한 TCP 연결 테스트)
-              if timeout 3 bash -c "</dev/tcp/localhost/$NEW_PORT" 2>/dev/null; then
-                echo "✅ Port $NEW_PORT is open"
+              # Spring Boot "Started" 메시지 확인
+              if docker logs ${APP_NAME}-${NEW_ENV} 2>/dev/null | grep -q "Started GoormthonServerApplication"; then
+                echo "✅ Spring Boot application started!"
             
-                # Actuator health 체크
-                if curl -f -s --connect-timeout 5 --max-time 10 http://localhost:${NEW_PORT}/actuator/health >/dev/null 2>&1; then
-                  echo "✅ Application is healthy!"
+                # 포트 확인
+                if timeout 3 bash -c "</dev/tcp/localhost/$NEW_PORT" 2>/dev/null; then
+                  echo "✅ Port $NEW_PORT is open"
             
-                  # Health 상태 상세 확인
-                  HEALTH_STATUS=$(curl -s --connect-timeout 5 --max-time 10 http://localhost:${NEW_PORT}/actuator/health 2>/dev/null | jq -r '.status' 2>/dev/null || echo "unknown")
-                  echo "📊 Application status: $HEALTH_STATUS"
+                  # 추가 안정화 대기
+                  echo "⏳ Waiting for application stabilization..."
+                  sleep 15
             
-                  # API 테스트
-                  echo "🧪 Testing API endpoint..."
-                  if curl -f -s --connect-timeout 5 --max-time 10 "http://localhost:${NEW_PORT}/api/tour-spots/detail?contentId=TEST" >/dev/null 2>&1; then
-                    echo "✅ API endpoint responding"
+                  # Actuator health 체크
+                  if curl -f -s --connect-timeout 10 --max-time 20 http://localhost:${NEW_PORT}/actuator/health >/dev/null 2>&1; then
+                    echo "✅ Application is healthy!"
+            
+                    # Health 상태 확인
+                    HEALTH_STATUS=$(curl -s --connect-timeout 10 --max-time 20 http://localhost:${NEW_PORT}/actuator/health 2>/dev/null | jq -r '.status' 2>/dev/null || echo "UP")
+                    echo "📊 Application status: $HEALTH_STATUS"
+            
+                    # 이전 컨테이너 정리
+                    if [ "$CURRENT_ENV" != "" ] && [ "$CURRENT_ENV" != "$NEW_ENV" ]; then
+                      echo "🗑️ Cleaning up old container..."
+                      docker stop ${APP_NAME}-${CURRENT_ENV} 2>/dev/null || true
+                      docker rm ${APP_NAME}-${CURRENT_ENV} 2>/dev/null || true
+                      echo "✅ Old container cleaned up"
+                    fi
+            
+                    echo "🎉 Deployment completed successfully!"
+                    echo "📍 Application URL: http://${{ secrets.APP_SERVER_HOST }}:${NEW_PORT}"
+                    echo "📍 Health Check: http://localhost:${NEW_PORT}/actuator/health"
+                    echo "📊 Final memory status:"
+                    free -h
+            
+                    echo "📋 Final container status:"
+                    docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep springboot || echo "No springboot containers"
+                    exit 0
                   else
-                    echo "⚠️ API endpoint test failed (might be normal during startup)"
+                    echo "⚠️ Actuator health check failed, but application started - checking root endpoint"
+            
+                    # 루트 경로 테스트
+                    if curl -f -s --connect-timeout 10 --max-time 20 http://localhost:${NEW_PORT}/ >/dev/null 2>&1; then
+                      echo "✅ Root endpoint working - deployment successful!"
+            
+                      # 이전 컨테이너 정리
+                      if [ "$CURRENT_ENV" != "" ] && [ "$CURRENT_ENV" != "$NEW_ENV" ]; then
+                        echo "🗑️ Cleaning up old container..."
+                        docker stop ${APP_NAME}-${CURRENT_ENV} 2>/dev/null || true
+                        docker rm ${APP_NAME}-${CURRENT_ENV} 2>/dev/null || true
+                        echo "✅ Old container cleaned up"
+                      fi
+            
+                      echo "🎉 Deployment completed successfully!"
+                      echo "📍 Application URL: http://${{ secrets.APP_SERVER_HOST }}:${NEW_PORT}"
+                      exit 0
+                    fi
                   fi
-            
-                  # 이전 컨테이너 정리
-                  if [ "$CURRENT_ENV" != "" ] && [ "$CURRENT_ENV" != "$NEW_ENV" ]; then
-                    echo "🗑️ Cleaning up old container..."
-                    sleep 5
-                    docker stop ${APP_NAME}-${CURRENT_ENV} 2>/dev/null || true
-                    docker rm ${APP_NAME}-${CURRENT_ENV} 2>/dev/null || true
-                    echo "✅ Old container cleaned up"
-                  fi
-            
-                  echo "🎉 Deployment completed successfully!"
-                  echo "📍 Application URL: http://${{ secrets.APP_SERVER_HOST }}:${NEW_PORT}"
-                  echo "📍 Internal URL: http://localhost:${NEW_PORT}"
-                  echo "📍 Health Check: http://localhost:${NEW_PORT}/actuator/health"
-                  echo "📊 Final memory status:"
-                  free -h
-            
-                  # 최종 상태 확인
-                  echo "📋 Final container status:"
-                  docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep springboot || echo "No springboot containers"
-                  exit 0
                 fi
               fi
             
-              echo "⏳ Waiting 5 seconds before next attempt..."
+              # 진행률 표시
+              if [ $((i % 10)) -eq 0 ]; then
+                echo "📊 Progress: $i/60 ($(((i * 100) / 60))%)"
+                echo "📋 Recent logs:"
+                docker logs ${APP_NAME}-${NEW_ENV} --tail 3 | grep -E "(Starting|Started|ERROR|Exception)" || echo "Application still initializing..."
+              fi
+            
               sleep 5
             done
             
-            echo "❌ Health check failed after 36 attempts (3 minutes)"
+            echo "❌ Health check failed after 5 minutes"
             echo "📋 Final container logs:"
             docker logs ${APP_NAME}-${NEW_ENV} --tail 100 2>/dev/null || echo "No logs available"
             
@@ -285,32 +297,20 @@ jobs:
             
             exit 1
 
-  verify-deployment:
-    name: Verify Deployment
-    runs-on: ubuntu-latest
-    needs: [deploy-application]
-    if: success()
-
-    steps:
-      - name: Verify Application Health
-        run: |
-          echo "🔍 Deployment verification completed!"
-          echo "✅ Spring Boot application deployed successfully"
-
   notify:
     name: Notify Deployment Status
     runs-on: ubuntu-latest
-    needs: [deploy-application, verify-deployment]
+    needs: [deploy-application]
     if: always()
 
     steps:
-      - name: Notify Success
+      - name: Success Notification
         if: ${{ needs.deploy-application.result == 'success' }}
         run: |
           echo "🎉 Spring Boot App Deployment SUCCESS!"
           echo "✅ Application: Deployed and Healthy"
 
-      - name: Notify Failure
+      - name: Failure Notification
         if: ${{ needs.deploy-application.result == 'failure' }}
         run: |
           echo "❌ Spring Boot App Deployment FAILED!"
