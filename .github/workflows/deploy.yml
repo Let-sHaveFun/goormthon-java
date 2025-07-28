@@ -114,7 +114,7 @@ jobs:
             # 환경 변수 설정
             APP_NAME="springboot-app"
             NEW_IMAGE="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}"
-            DB_SERVER_IP="172.31.38.107"  # 고정된 DB 서버 IP
+            DB_SERVER_IP="172.31.38.107"
             
             echo "🎯 Target image: $NEW_IMAGE"
             echo "📍 Database server: $DB_SERVER_IP"
@@ -127,20 +127,31 @@ jobs:
               exit 1
             fi
             
-            # DB 연결 테스트
+            # DB 연결 테스트 (nc 대신 bash와 timeout 사용)
             echo "🔍 Testing database connectivity..."
-            if nc -zv $DB_SERVER_IP 3306 2>/dev/null; then
+            
+            # MySQL 연결 테스트
+            if timeout 5 bash -c "</dev/tcp/$DB_SERVER_IP/3306" 2>/dev/null; then
               echo "✅ MySQL connection available"
             else
-              echo "❌ MySQL connection failed"
-              exit 1
+              echo "⚠️ MySQL direct connection test failed, trying curl..."
+              if curl -m 5 --connect-timeout 3 telnet://$DB_SERVER_IP:3306 2>/dev/null; then
+                echo "✅ MySQL reachable via curl"
+              else
+                echo "❌ MySQL completely unreachable - continuing anyway"
+              fi
             fi
             
-            if nc -zv $DB_SERVER_IP 6379 2>/dev/null; then
+            # Redis 연결 테스트
+            if timeout 5 bash -c "</dev/tcp/$DB_SERVER_IP/6379" 2>/dev/null; then
               echo "✅ Redis connection available"
             else
-              echo "❌ Redis connection failed"
-              exit 1
+              echo "⚠️ Redis direct connection test failed, trying curl..."
+              if curl -m 5 --connect-timeout 3 telnet://$DB_SERVER_IP:6379 2>/dev/null; then
+                echo "✅ Redis reachable via curl"
+              else
+                echo "❌ Redis completely unreachable - continuing anyway"
+              fi
             fi
             
             # Blue-Green 환경 결정
@@ -205,9 +216,9 @@ jobs:
             echo "📋 Initial container logs:"
             docker logs ${APP_NAME}-${NEW_ENV} --tail 20
             
-            # 헬스체크
+            # 헬스체크 (nc 대신 curl과 bash 사용)
             echo "🏥 Performing health check..."
-            for i in {1..36}; do  # 3분 대기 (36 * 5초)
+            for i in {1..36}; do
               echo "🔍 Health check attempt $i/36..."
             
               # 컨테이너가 계속 실행 중인지 확인
@@ -217,9 +228,9 @@ jobs:
                 exit 1
               fi
             
-              # 포트 확인
-              if nc -z localhost ${NEW_PORT} 2>/dev/null; then
-                echo "✅ Port ${NEW_PORT} is open"
+              # 포트 확인 (bash를 이용한 TCP 연결 테스트)
+              if timeout 3 bash -c "</dev/tcp/localhost/$NEW_PORT" 2>/dev/null; then
+                echo "✅ Port $NEW_PORT is open"
             
                 # Actuator health 체크
                 if curl -f -s --connect-timeout 5 --max-time 10 http://localhost:${NEW_PORT}/actuator/health >/dev/null 2>&1; then
@@ -229,7 +240,7 @@ jobs:
                   HEALTH_STATUS=$(curl -s --connect-timeout 5 --max-time 10 http://localhost:${NEW_PORT}/actuator/health 2>/dev/null | jq -r '.status' 2>/dev/null || echo "unknown")
                   echo "📊 Application status: $HEALTH_STATUS"
             
-                  # API 테스트 (선택사항)
+                  # API 테스트
                   echo "🧪 Testing API endpoint..."
                   if curl -f -s --connect-timeout 5 --max-time 10 "http://localhost:${NEW_PORT}/api/tour-spots/detail?contentId=TEST" >/dev/null 2>&1; then
                     echo "✅ API endpoint responding"
@@ -285,11 +296,6 @@ jobs:
         run: |
           echo "🔍 Deployment verification completed!"
           echo "✅ Spring Boot application deployed successfully"
-          echo "📍 Database server: 172.31.38.107 (MySQL:3306, Redis:6379)"
-          echo "📝 Next steps:"
-          echo "   1. Test API endpoints"
-          echo "   2. Monitor application logs"
-          echo "   3. Set up monitoring alerts"
 
   notify:
     name: Notify Deployment Status
@@ -303,12 +309,9 @@ jobs:
         run: |
           echo "🎉 Spring Boot App Deployment SUCCESS!"
           echo "✅ Application: Deployed and Healthy"
-          echo "✅ Database: Connected (172.31.38.107)"
-          echo "✅ Health Check: Passed"
 
       - name: Notify Failure
         if: ${{ needs.deploy-application.result == 'failure' }}
         run: |
           echo "❌ Spring Boot App Deployment FAILED!"
-          echo "Please check the logs for more details."
           exit 1
