@@ -1,0 +1,50 @@
+# src/test/resources/application-test.yml
+
+spring:
+  config:
+    activate:
+      on-profile: test
+  
+  # 테스트용 H2 인메모리 데이터베이스
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  
+  # H2 콘솔 (테스트 시에만)
+  h2:
+    console:
+      enabled: true
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop  # 테스트 시마다 스키마 재생성
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+  
+  # 테스트용 Redis (임베디드 사용)
+  data:
+    redis:
+      host: localhost
+      port: 6370  # 다른 포트 사용 (임베디드)
+
+# Actuator 설정 (테스트용 최소화)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+# 로깅 (테스트용 최소화)
+logging:
+  level:
+    org.springframework: WARN
+    org.hibernate: WARN
+    com.zaxxer.hikari: WARN

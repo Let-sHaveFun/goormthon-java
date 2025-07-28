@@ -62,12 +62,32 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.testcontainers:mysql'
     testImplementation 'org.testcontainers:junit-jupiter'
+    testRuntimeOnly 'com.h2database:h2'  // 테스트용 H2 데이터베이스
+    testImplementation 'it.ozimov:embedded-redis:0.7.3'  // 테스트용 임베디드 Redis
+
 
     implementation 'io.github.cdimascio:dotenv-java:3.0.0'
 }
 
+// 프로파일별 빌드 설정
+tasks.named('bootJar') {
+    archiveFileName = 'app.jar'
+}
+// 테스트 설정
 tasks.named('test') {
     useJUnitPlatform()
+
+    // 테스트용 프로파일 설정
+    systemProperty 'spring.profiles.active', 'test'
+
+    // 테스트 메모리 설정
+    maxHeapSize = '512m'
+
+    // 테스트 결과 보고서
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
 }
 
 task dockerBuildFreeTier(type: Exec) {
