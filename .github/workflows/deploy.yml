@@ -118,23 +118,43 @@ jobs:
                 -e MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }} \
                 -v mysql_data:/var/lib/mysql \
                 -p 3306:3306 \
-                --memory=350m \
-                --memory-swap=500m \
+                --memory=400m \
+                --memory-swap=600m \
                 --restart unless-stopped \
                 mysql:8.0 \
-                --innodb-buffer-pool-size=128M \
-                --innodb-log-buffer-size=8M \
-                --max-connections=50 \
-                --innodb-flush-log-at-trx-commit=2
+                --innodb-buffer-pool-size=32M \
+                --innodb-log-buffer-size=1M \
+                --max-connections=10 \
+                --innodb-flush-log-at-trx-commit=0 \
+                --skip-performance-schema \
+                --disable-log-bin \
+                --innodb-doublewrite=0
             
               echo "⏳ Waiting for MySQL to initialize..."
               sleep 60
             
               # MySQL 상태 확인
-              docker logs mysql-primary --tail 20
-            else
-              echo "✅ MySQL is already running"
-            fi
+              timeout=120
+              counter=0
+              while [ $counter -lt $timeout ]; do
+                if docker exec mysql-primary mysqladmin ping -h localhost -u root -p${{ secrets.MYSQL_ROOT_PASSWORD }} --silent 2>/dev/null; then
+                  echo "✅ MySQL is ready!"
+                  break
+                fi
+            
+                if [ $((counter % 10)) -eq 0 ]; then
+                  echo "⏳ Still waiting for MySQL... (${counter}s/${timeout}s)"
+                fi
+            
+                sleep 1
+                counter=$((counter + 1))
+              done
+            
+              if [ $counter -eq $timeout ]; then
+                echo "❌ MySQL failed to start within ${timeout} seconds"
+                docker logs mysql-primary --tail 50
+                exit 1
+              fi
             
             # Redis 설정 및 시작
             if ! docker ps | grep -q redis-primary; then
