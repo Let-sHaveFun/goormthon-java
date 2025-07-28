@@ -69,3 +69,14 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+task dockerBuildFreeTier(type: Exec) {
+    group = 'docker'
+    description = 'Build Docker image optimized for AWS Free Tier'
+
+    commandLine 'docker', 'build',
+            '--build-arg', 'SPRING_PROFILES_ACTIVE=freetier',
+            '-t', "${project.name}:freetier",
+            '-f', 'Dockerfile.freetier',
+            '.'
+}

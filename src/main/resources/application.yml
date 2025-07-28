@@ -131,21 +131,103 @@ logging:
     root: WARN
 
 ---
+# 프리티어 전용 프로파일
 spring:
   config:
     activate:
-      on-profile: k8s
+      on-profile: freetier
+
   datasource:
-    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 3        # 메모리 절약
+      minimum-idle: 1
+      idle-timeout: 300000
+      connection-timeout: 20000
+      leak-detection-threshold: 0  # 비활성화
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false               # 로그 최소화
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        jdbc:
+          batch_size: 10          # 메모리 절약
+        cache:
+          use_second_level_cache: false  # 캐시 비활성화
+        query:
+          plan_cache_max_size: 32
+
   data:
     redis:
-      host: ${REDIS_HOST:redis-service}
-      port: ${REDIS_PORT:6379}
-  jpa:
-    show-sql: false
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: ${SPRING_REDIS_PORT:6379}
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 3           # 연결 풀 최소화
+          max-idle: 2
+          min-idle: 1
+
+  # 비동기 처리 최소화
+  task:
+    execution:
+      pool:
+        core-size: 1
+        max-size: 2
+
+server:
+  port: ${SERVER_PORT:8080}
+  tomcat:
+    threads:
+      max: 50                     # 스레드 최소화
+      min-spare: 5
+    max-connections: 100          # 연결 수 제한
+    accept-count: 10
+    connection-timeout: 20000
+
+# Actuator 설정 (최소화)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+      show-components: false      # 상세 정보 비활성화
+  health:
+    redis:
+      enabled: true
+    db:
+      enabled: true
+    mail:
+      enabled: false
+    diskspace:
+      enabled: false
+
+# 로깅 최소화
 logging:
   level:
-    com.jeju.audioguide: INFO
-    root: INFO
+    com.yourcompany.yourapp: INFO
+    org.springframework: WARN
+    org.hibernate: WARN
+    org.apache: WARN
+    com.zaxxer.hikari: WARN
+  pattern:
+    console: "%d{HH:mm:ss} %-5level %logger{20} - %msg%n"
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 3
+
+# JMX 비활성화 (메모리 절약)
+spring.jmx.enabled: false
+
+# 메트릭 비활성화
+management.metrics.enable.all: false
