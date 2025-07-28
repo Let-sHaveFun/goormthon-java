@@ -63,8 +63,13 @@ dependencies {
     testImplementation 'org.testcontainers:mysql'
     testImplementation 'org.testcontainers:junit-jupiter'
     testRuntimeOnly 'com.h2database:h2'  // 테스트용 H2 데이터베이스
-    testImplementation 'it.ozimov:embedded-redis:0.7.3'  // 테스트용 임베디드 Redis
+    testImplementation('it.ozimov:embedded-redis:0.7.3') {
+        exclude group: 'org.slf4j', module: 'slf4j-simple'  // SLF4J Simple 제외
+    } // 테스트용 임베디드 Redis
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
 
+    implementation 'jakarta.annotation:jakarta.annotation-api:2.1.1'
 
     implementation 'io.github.cdimascio:dotenv-java:3.0.0'
 }
