@@ -143,7 +143,7 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      maximum-pool-size: 3        # 메모리 절약
+      maximum-pool-size: 3        # 메모리 절약s
       minimum-idle: 1
       idle-timeout: 300000
       connection-timeout: 20000
