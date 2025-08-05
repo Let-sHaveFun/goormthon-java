@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/java" isTestSource="false" />
+    </content>
+    <orderEntry type="jdk" jdkName="21" jdkType="JavaSDK" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="Gradle: io.github.cdimascio:dotenv-java:3.0.0" level="project" />
+    <orderEntry type="library" name="Gradle: org.springframework:spring-web:6.2.8" level="project" />
+    <orderEntry type="library" name="Gradle: org.projectlombok:lombok:1.18.38" level="project" />
+    <orderEntry type="library" name="Gradle: org.springframework:spring-context:6.2.8" level="project" />
+    <orderEntry type="library" name="Gradle: io.netty:netty-transport:4.1.122.Final" level="project" />
+    <orderEntry type="library" name="Gradle: org.springframework:spring-webflux:6.2.8" level="project" />
+    <orderEntry type="library" name="Gradle: io.netty:netty-handler:4.1.122.Final" level="project" />
+    <orderEntry type="library" name="Gradle: io.projectreactor.netty:reactor-netty-http:1.2.7" level="project" />
+    <orderEntry type="library" name="Gradle: org.springframework:spring-webmvc:6.2.8" level="project" />
+    <orderEntry type="library" name="Gradle: io.swagger.core.v3:swagger-annotations-jakarta:2.2.15" level="project" />
+    <orderEntry type="library" name="Gradle: jakarta.persistence:jakarta.persistence-api:3.1.0" level="project" />
+    <orderEntry type="library" name="Gradle: org.hibernate.orm:hibernate-core:6.6.18.Final" level="project" />
+    <orderEntry type="library" name="Gradle: org.springframework:spring-tx:6.2.8" level="project" />
+    <orderEntry type="library" name="Gradle: org.springframework.data:spring-data-jpa:3.5.1" level="project" />
+    <orderEntry type="library" name="Gradle: org.springframework.data:spring-data-commons:3.5.1" level="project" />
+    <orderEntry type="library" name="Gradle: org.springframework.boot:spring-boot:3.5.3" level="project" />
+    <orderEntry type="library" name="Gradle: org.springframework.boot:spring-boot-autoconfigure:3.5.3" level="project" />
+    <orderEntry type="library" name="Gradle: com.fasterxml.jackson.core:jackson-databind:2.19.1" level="project" />
+    <orderEntry type="library" name="Gradle: org.springframework:spring-beans:6.2.8" level="project" />
+    <orderEntry type="library" name="Gradle: io.projectreactor:reactor-core:3.7.7" level="project" />
+  </component>
+</module>
