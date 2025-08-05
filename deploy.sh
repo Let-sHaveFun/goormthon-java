@@ -132,7 +132,7 @@ case "$1" in
     status) status ;;
     init) init ;;
     *) echo "사용법: $0 {deploy|rollback|status|init}"; exit 1 ;;
-esac#!/bin/bash
+esac #!/bin/bash
 
 # 무중단 배포 스크립트 - Blue-Green 방식
 
