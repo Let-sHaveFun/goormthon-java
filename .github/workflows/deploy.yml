@@ -41,12 +41,8 @@ jobs:
       - name: 🧪 Test SpringBoot
         run: |
           chmod +x gradlew
-          ./gradlew clean test jacocoTestReport
+          ./gradlew clean test
 
-      - name: 📊 Upload coverage reports
-        uses: codecov/codecov-action@v3
-        with:
-          files: ./build/reports/jacoco/test/jacocoTestReport.xml
 
   build-and-deploy:
     needs: test
