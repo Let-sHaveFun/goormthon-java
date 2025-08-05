@@ -47,7 +47,6 @@ services:
   # SpringBoot Application - Blue
   springboot-blue:
     build:
-      context: ./springboot
       dockerfile: Dockerfile
     image: dormung-springboot:latest
     container_name: dormung-springboot-blue
@@ -85,7 +84,6 @@ services:
   # SpringBoot Application - Green
   springboot-green:
     build:
-      context: ./springboot
       dockerfile: Dockerfile
     image: dormung-springboot:latest
     container_name: dormung-springboot-green
