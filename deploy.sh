@@ -6,10 +6,12 @@ set -e
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
+BLUE='\033[0;34m'
 NC='\033[0m'
 
 log() { echo -e "${GREEN}[$(date +'%H:%M:%S')] $1${NC}"; }
 error() { echo -e "${RED}[ERROR] $1${NC}"; }
+info() { echo -e "${BLUE}[INFO] $1${NC}"; }
 
 get_active_environment() {
     if docker ps --format "{{.Names}}" | grep -q "app-blue"; then
@@ -54,12 +56,14 @@ update_nginx_config() {
     fi
 
     docker exec nginx nginx -s reload
+    log "Nginx 설정 리로드 완료"
 }
 
 deploy() {
     log "=== 무중단 배포 시작 ==="
 
     current_env=$(get_active_environment)
+    log "현재 활성 환경: $current_env"
 
     if [ "$current_env" = "blue" ]; then
         target_env="green"
@@ -115,9 +119,23 @@ status() {
     echo "현재 활성 환경: $current_env"
     docker ps --format "table {{.Names}}\t{{.Status}}" | grep -E "(app|mysql|redis|nginx)"
 
+    echo -e "\n헬스체크:"
     curl -sf "http://localhost:8080/actuator/health" > /dev/null 2>&1 && echo "8080 (Blue): ✅" || echo "8080 (Blue): ❌"
     curl -sf "http://localhost:8081/actuator/health" > /dev/null 2>&1 && echo "8081 (Green): ✅" || echo "8081 (Green): ❌"
     curl -sf "http://localhost/health" > /dev/null 2>&1 && echo "Nginx: ✅" || echo "Nginx: ❌"
+}
+
+logs() {
+    local service=$1
+    local lines=${2:-50}
+
+    if [ -z "$service" ]; then
+        echo "사용법: $0 logs <service> [lines]"
+        echo "서비스: app-blue, app-green, mysql, redis, nginx"
+        return 1
+    fi
+
+    docker compose logs --tail="$lines" -f "$service"
 }
 
 init() {
@@ -130,8 +148,9 @@ case "$1" in
     deploy) deploy ;;
     rollback) rollback ;;
     status) status ;;
+    logs) logs "$2" "$3" ;;
     init) init ;;
-    *) echo "사용법: $0 {deploy|rollback|status|init}"; exit 1 ;;
+    *) echo "사용법: $0 {deploy|rollback|status|logs|init}"; exit 1 ;;
 esac #!/bin/bash
 
 # 무중단 배포 스크립트 - Blue-Green 방식
@@ -315,13 +334,34 @@ logs() {
 
     if [ -z "$service" ]; then
         echo "사용법: $0 logs <service> [lines]"
-        echo "서비스: springboot-blue, springboot-green, mysql, redis, nginx"
+        echo "서비스: springboot-blue, springboot-green, python-app, mysql, redis, nginx"
         return 1
     fi
 
     docker compose logs --tail="$lines" -f "$service"
 }
 
+# 초기 설정
+init() {
+    log "초기 설정 시작"
+
+    mkdir -p nginx/conf.d mysql/init logs/{springboot,python,nginx} static
+
+    if [ ! -f ".env" ]; then
+        cat > .env << EOF
+MYSQL_ROOT_PASSWORD=rootpassword
+MYSQL_DATABASE=dormung
+MYSQL_USER=dormung_user
+MYSQL_PASSWORD=dormung_password
+BUILD_TAG=latest
+EOF
+        log ".env 파일 생성됨"
+    fi
+
+    docker network create dormung-network 2>/dev/null || true
+
+    log "초기 설정 완료"
+}
 
 # 사용법
 usage() {
