@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: dormung
+  datasource:
+    url: jdbc:mysql://localhost:3306/dormung
+    username: dormung_user
+    password: dormung_password
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+logging:
+  level:
+    com.dormung: DEBUG
+    org.springframework.web: DEBUG

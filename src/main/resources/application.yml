@@ -1,100 +1,43 @@
-# application.yml
 spring:
   application:
-    name: goormthon-server
-
-  # ???? ??
+    name: dormung-app
+  
   profiles:
-    active: ${APP_ENV:development}
-
-  # ?????? ??
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:jeju_audio_guide}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-    username: ${DB_USERNAME:developer}
-    password: ${DB_PASSWORD:devpassword123!}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/dormung?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul}
+    username: ${SPRING_DATASOURCE_USERNAME:dormung_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:dormung_password}
     driver-class-name: com.mysql.cj.jdbc.Driver
-
-  # Redis ??
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+  
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      timeout: 3000ms
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 0
-
-  # ?? ??? ??
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
+      timeout: 2000ms
+  
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
 
-# ?? ??
 server:
   port: ${SERVER_PORT:8080}
   servlet:
     context-path: /api
-  compression:
-    enabled: true
+  shutdown: graceful
 
-# ?? API ??
-external-api:
-  jeju-visit:
-    url: ${JEJU_VISIT_API_URL:https://api.visitjeju.net}
-    key: ${JEJU_VISIT_API_KEY:your_key_here}
-    timeout: 10000
-
-  llm:
-    url: ${LLM_API_URL:https://api.openai.com/v1}
-    key: ${LLM_API_KEY:your_key_here}
-    timeout: 30000
-    model: gpt-3.5-turbo
-
-  naver-tts:
-    url: ${NAVER_TTS_API_URL:https://naveropenapi.apigw.ntruss.com/tts-premium/v1/tts}
-    client-id: ${NAVER_CLIENT_ID:your_client_id}
-    client-secret: ${NAVER_CLIENT_SECRET:your_client_secret}
-    timeout: 30000
-
-# AWS S3 ??
-aws:
-  s3:
-    access-key: ${AWS_ACCESS_KEY_ID:your_access_key}
-    secret-key: ${AWS_SECRET_ACCESS_KEY:your_secret_key}
-    region: ${AWS_REGION:ap-northeast-2}
-    bucket: ${AWS_S3_BUCKET:jeju-audio-guide-bucket}
-
-# JWT ??
-jwt:
-  secret: ${JWT_SECRET:your_jwt_secret_key_here}
-  expiration: 86400000 # 24?
-
-# ?? ??
-logging:
-  level:
-    com.jeju.audioguide: ${LOG_LEVEL:INFO}
-    org.springframework.web: ${LOG_LEVEL:INFO}
-    org.hibernate.SQL: ${LOG_LEVEL:INFO}
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-
-# Swagger/OpenAPI ??
-springdoc:
-  api-docs:
-    path: /api-docs
-    enabled: true
-  swagger-ui:
-    path: /swagger-ui.html
-    enabled: true
-    tags-sorter: alpha
-    operations-sorter: alpha
-    display-request-duration: true
-  show-actuator: true
-
-# ????? ?? (????)
 management:
   endpoints:
     web:
@@ -102,132 +45,12 @@ management:
         include: health,info,metrics
   endpoint:
     health:
-      show-details: when-authorized
+      show-details: always
 
----
-# ?? ?? ??
-spring:
-  config:
-    activate:
-      on-profile: development
-  jpa:
-    show-sql: true
 logging:
   level:
-    com.jeju.audioguide: DEBUG
-    org.springframework.web: DEBUG
-
----
-# ?? ?? ??
-spring:
-  config:
-    activate:
-      on-profile: production
-  jpa:
-    show-sql: false
-logging:
-  level:
-    com.jeju.audioguide: INFO
-    root: WARN
-
----
-# 프리티어 전용 프로파일
-spring:
-  config:
-    activate:
-      on-profile: freetier
-
-  datasource:
-    url: ${SPRING_DATASOURCE_URL}
-    username: ${SPRING_DATASOURCE_USERNAME}
-    password: ${SPRING_DATASOURCE_PASSWORD}
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    hikari:
-      maximum-pool-size: 3        # 메모리 절약
-      minimum-idle: 1
-      idle-timeout: 300000
-      connection-timeout: 20000
-      leak-detection-threshold: 0  # 비활성화
-
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: false               # 로그 최소화
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.MySQL8Dialect
-        jdbc:
-          batch_size: 10          # 메모리 절약
-        cache:
-          use_second_level_cache: false  # 캐시 비활성화
-        query:
-          plan_cache_max_size: 32
-
-  data:
-    redis:
-      host: ${SPRING_REDIS_HOST:localhost}
-      port: ${SPRING_REDIS_PORT:6379}
-      timeout: 3000ms
-      lettuce:
-        pool:
-          max-active: 3           # 연결 풀 최소화
-          max-idle: 2
-          min-idle: 1
-
-  # 비동기 처리 최소화
-  task:
-    execution:
-      pool:
-        core-size: 1
-        max-size: 2
-
-server:
-  port: ${SERVER_PORT:8080}
-  tomcat:
-    threads:
-      max: 50                     # 스레드 최소화
-      min-spare: 5
-    max-connections: 100          # 연결 수 제한
-    accept-count: 10
-    connection-timeout: 20000
-
-# Actuator 설정 (최소화)
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info
-  endpoint:
-    health:
-      show-details: never
-      show-components: NEVER      # 상세 정보 비활성화
-  health:
-    redis:
-      enabled: true
-    db:
-      enabled: true
-    mail:
-      enabled: false
-    diskspace:
-      enabled: false
-
-# 로깅 최소화
-logging:
-  level:
-    com.yourcompany.yourapp: INFO
-    org.springframework: WARN
-    org.hibernate: WARN
-    org.apache: WARN
-    com.zaxxer.hikari: WARN
+    com.dormung: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
   pattern:
-    console: "%d{HH:mm:ss} %-5level %logger{20} - %msg%n"
-  logback:
-    rollingpolicy:
-      max-file-size: 10MB
-      max-history: 3
-
-# JMX 비활성화 (메모리 절약)
-spring.jmx.enabled: false
-
-# 메트릭 비활성화
-management.metrics.enable.all: false
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

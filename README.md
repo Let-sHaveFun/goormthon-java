@@ -2,6 +2,8 @@
 
 ## 1. 위경도 기반 근처 관광지 조회
 
+dormung.goorm.training -> 
+
 **GET** `/api/tour-spots/location`
 
 사용자 위치 기준 반경 내 관광지를 거리순으로 조회합니다.

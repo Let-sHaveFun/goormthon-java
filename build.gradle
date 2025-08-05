@@ -4,7 +4,7 @@ plugins {
     id 'io.spring.dependency-management' version '1.1.7'
 }
 
-group = 'com.mycompany'
+group = 'com'
 version = '0.0.1-SNAPSHOT'
 
 java {
@@ -37,6 +37,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'  // 헬스체크용 추가
     implementation 'org.springframework.boot:spring-boot-starter-validation'  // 검증용 추가
 
+    implementation 'io.projectreactor.netty:reactor-netty'
+    implementation 'io.netty:netty-all'
+
     // 🤔 data-jdbc와 data-jpa 동시 사용 - 필요시에만 유지
     implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
 
@@ -66,6 +69,8 @@ dependencies {
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
+    implementation 'ch.qos.logback:logback-classic'
+    implementation 'org.slf4j:slf4j-api'
 
     // Development Tools
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
