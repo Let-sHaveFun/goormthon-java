@@ -43,7 +43,7 @@ services:
       retries: 3
 
 
-  # SpringBoot Application - Blue
+  # SpringBoot Application - Blue dkro
   app-blue:
     profiles:
       - blue
