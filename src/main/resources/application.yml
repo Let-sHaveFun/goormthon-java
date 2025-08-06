@@ -1,14 +1,12 @@
 spring:
   application:
-    name: dormung-app
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
+    name: dormung-springboot
 
   # Database
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/jeju_audio_guide?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul}
+    url: "jdbc:mysql://localhost:3306/jeju_audio_guide?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul"
     username: ${SPRING_DATASOURCE_USERNAME}
-    password: ${SPRING_DATASOURCE_PASSWORD}
+    password: ${MYSQL_ROOT_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   # JPA/Hibernate
