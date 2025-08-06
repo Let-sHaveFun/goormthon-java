@@ -63,6 +63,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+
       - name: 📝 Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -86,12 +87,14 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+
       - name: 🚀 Deploy to Raspberry Pi
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ env.RASPBERRY_PI_HOST }}
           username: ${{ env.RASPBERRY_PI_USER }}
           key: ${{ secrets.RASPBERRY_PI_SSH_KEY }}
+          port: 2022
           script: |
             cd /home/yoon/goormthon-java
             git pull origin main
@@ -114,6 +117,7 @@ jobs:
           host: ${{ env.RASPBERRY_PI_HOST }}
           username: ${{ env.RASPBERRY_PI_USER }}
           key: ${{ secrets.RASPBERRY_PI_SSH_KEY }}
+          port: 2022
           script: |
             cd /home/yoon/goormthon-java
             sleep 30
@@ -163,6 +167,7 @@ jobs:
           host: ${{ env.RASPBERRY_PI_HOST }}
           username: ${{ env.RASPBERRY_PI_USER }}
           key: ${{ secrets.RASPBERRY_PI_SSH_KEY }}
+          port: 2022
           script: |
             cd /home/yoon/goormthon-java
             echo "🔄 Auto rollback initiated"
