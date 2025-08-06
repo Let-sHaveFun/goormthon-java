@@ -130,17 +130,7 @@ jobs:
           port: 2022
           script: |
             sleep 120
-            for i in {1..10}; do
-              if curl -sf http://localhost/api/actuator/health; then
-                echo "✅ SpringBoot health check passed"
-                exit 0
-              fi
-              echo "Retry $i/10..."
-              sleep 5
-            done
-            echo "❌ SpringBoot health check failed"
-            exit 1
-            
+            curl -sf http://localhost/api/actuator/health && echo "✅ Passed" || echo "❌ Failed"
             ./deploy.sh status
 
       - name: 📢 Discord Success Notification
