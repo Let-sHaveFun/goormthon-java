@@ -130,7 +130,7 @@ jobs:
           port: 2022
           script: |
             cd /home/yoon/goormthon-java
-            sleep 30
+            sleep 80
             
             if curl -sf http://localhost/api/actuator/health; then
               echo "✅ SpringBoot health check passed"
