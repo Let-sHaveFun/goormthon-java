@@ -129,15 +129,17 @@ jobs:
           key: ${{ secrets.RASPBERRY_PI_SSH_KEY }}
           port: 2022
           script: |
-            cd /home/yoon/goormthon-java
-            sleep 80
-            
-            if curl -sf http://localhost/api/actuator/health; then
-              echo "✅ SpringBoot health check passed"
-            else
-              echo "❌ SpringBoot health check failed"
-              exit 1
-            fi
+            sleep 120
+            for i in {1..10}; do
+              if curl -sf http://localhost/api/actuator/health; then
+                echo "✅ SpringBoot health check passed"
+                exit 0
+              fi
+              echo "Retry $i/10..."
+              sleep 5
+            done
+            echo "❌ SpringBoot health check failed"
+            exit 1
             
             ./deploy.sh status
 
