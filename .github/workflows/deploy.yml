@@ -95,20 +95,20 @@ jobs:
           username: ${{ env.RASPBERRY_PI_USER }}
           key: ${{ secrets.RASPBERRY_PI_SSH_KEY }}
           port: 2022
+          envs: MYSQL_ROOT_PASSWORD,MYSQL_DATABASE,MYSQL_USER,MYSQL_PASSWORD
           script: |
             cd /home/yoon/goormthon-java
             git pull origin main
-            
+
             export BUILD_TAG="${{ github.sha }}"
-            export DOCKER_REGISTRY="${{ env.REGISTRY }}"
-            export DOCKER_REPO="${{ env.IMAGE_NAME }}"
-            
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
-            
+            export MYSQL_ROOT_PASSWORD="${{ secrets.MYSQL_ROOT_PASSWORD }}"
+            export MYSQL_DATABASE="${{ secrets.MYSQL_DATABASE }}"
+            export MYSQL_USER="${{ secrets.MYSQL_USER }}"
+            export MYSQL_PASSWORD="${{ secrets.MYSQL_PASSWORD }}"
+
             docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-arm64
-            docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-arm64  dormung-springboot:latest
-            
-            chmod +x deploy.sh
+            docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-arm64 dormung-springboot:latest
+
             ./deploy.sh deploy
 
       - name: 🧪 Verify deployment
