@@ -129,6 +129,7 @@ jobs:
           key: ${{ secrets.RASPBERRY_PI_SSH_KEY }}
           port: 2022
           script: |
+            cd /home/yoon/goormthon-java
             sleep 120
             curl -sf http://localhost/api/actuator/health && echo "✅ Passed" || echo "❌ Failed"
             ./deploy.sh status
