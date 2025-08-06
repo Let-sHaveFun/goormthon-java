@@ -58,11 +58,11 @@ update_nginx_config() {
     log "Nginx 설정을 $target_env 환경으로 업데이트"
 
     if [ "$target_env" = "green" ]; then
-        sed -i 's/server app-blue:8080/# server app-blue:8080/' nginx/nginx.conf
-        sed -i 's/# server app-green:8080/server app-green:8080/' nginx/nginx.conf
+        sed -i 's/server app-blue:8080;/# server app-blue:8080;/' nginx/nginx.conf
+        sed -i 's/# server app-green:8080;/server app-green:8080;/' nginx/nginx.conf
     else
-        sed -i 's/server app-green:8080/# server app-green:8080/' nginx/nginx.conf
-        sed -i 's/# server app-blue:8080/server app-blue:8080/' nginx/nginx.conf
+        sed -i 's/server app-green:8080;/# server app-green:8080;/' nginx/nginx.conf
+        sed -i 's/# server app-blue:8080;/server app-blue:8080;/' nginx/nginx.conf
     fi
 
     docker exec nginx nginx -s reload 2>/dev/null || {
