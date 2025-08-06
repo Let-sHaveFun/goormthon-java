@@ -64,11 +64,15 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
 
+      - name: 🔧 Setup image name
+        run: echo "IMAGE_LOWER=$(echo '${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+
       - name: 📝 Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_LOWER }}
           tags: |
             type=ref,event=branch
             type=sha,prefix={{branch}}-
@@ -95,7 +99,6 @@ jobs:
           username: ${{ env.RASPBERRY_PI_USER }}
           key: ${{ secrets.RASPBERRY_PI_SSH_KEY }}
           port: 2022
-          envs: MYSQL_ROOT_PASSWORD,MYSQL_DATABASE,MYSQL_USER,MYSQL_PASSWORD
           script: |
             cd /home/yoon/goormthon-java
             git pull origin main
@@ -110,8 +113,9 @@ jobs:
             
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
             
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-arm64
-            docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-arm64  dormung-springboot:latest
+            export IMAGE_LOWER=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+            docker pull ${{ env.REGISTRY }}/$IMAGE_LOWER:${{ github.sha }}-arm64
+            docker tag ${{ env.REGISTRY }}/$IMAGE_LOWER:${{ github.sha }}-arm64 dormung-springboot:latest
             
             chmod +x deploy.sh
             ./deploy.sh deploy
