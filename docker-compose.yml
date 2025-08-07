@@ -130,8 +130,8 @@ services:
       - ./logs/nginx:/var/log/nginx
       - ./static:/var/www/static:ro
     ports:
-      - "80:80"
-      - "443:443"
+      - "19909:19909"
+#      - "443:443"
     networks:
       - dormung-network
     restart: unless-stopped
